@@ -8,8 +8,15 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-
+gradio = "^4.44.0"
+pydantic = "^2.9.2"
+openai = "^1.46.0"
+python-dotenv = "^1.0.1"
+uvicorn = "^0.30.6"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120

@@ -1,0 +1,15 @@
+services:
+  crowd:
+    build: .
+    ports:
+      - ${CROWD_PORT:-8000}:8000
+    volumes:
+      - ${AGENTS_DIR:-./agents}:/agents
+    environment:
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_DEPLOYMENT_NAME=${AZURE_OPENAI_DEPLOYMENT_NAME}
+      - OPENAI_API_VERSION=${OPENAI_API_VERSION}
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+      - ZOHO_SMTP_EMAIL=${ZOHO_SMTP_EMAIL}
+      - ZOHO_SMTP_PASSWORD=${ZOHO_SMTP_PASSWORD}
