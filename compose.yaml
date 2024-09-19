@@ -1,6 +1,11 @@
 services:
   crowd:
     build: .
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
     ports:
       - ${CROWD_PORT:-8000}:8000
     volumes:
