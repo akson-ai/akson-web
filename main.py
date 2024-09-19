@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+import registry
 from agent import Agent
 from logger import logger
 
@@ -55,12 +56,13 @@ for agent_file in os.listdir(agents_dir):
     logger.info("Loading file: %s", agent_file)
     module = importlib.import_module(module_name)
     agent = module.agent
-    agents[agent.name] = agent
     if not isinstance(agent, Agent):
         continue
-    logger.info("Agent loaded: %s", agent.name)
+    registry.register(agent)
+    agents[agent.name] = agent
     interface = create_chat_interface(agent)
     gr.mount_gradio_app(app, interface, f"/chat/{agent.name}")
+    logger.info("Agent loaded: %s", agent.name)
 
 
 class Message(BaseModel):

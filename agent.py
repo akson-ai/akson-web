@@ -80,9 +80,6 @@ class Agent:
         self.client = AzureOpenAI()
         self.threads = Threads(self.prompt)
 
-        # TODO move registration to main.py
-        import registry; registry.register(self)  # fmt: skip  # noqa  # prevents circular import
-
     def message(self, input: str, *, sender: str, session_id: str | None) -> str | None:
         logger.warning("%s -> %s: %s", sender, self.name, input)
 
