@@ -1,7 +1,6 @@
 import os
 import datetime
 from textwrap import dedent
-from typing import Any
 
 from pydantic import Field
 from openai import AzureOpenAI
@@ -90,7 +89,7 @@ class Agent:
 
         return completion
 
-    def _tool_kwargs(self) -> dict[str, Any]:
+    def _tool_kwargs(self) -> dict:
         tools = self.toolset.openai_schema()
         if not tools:
             return {}
