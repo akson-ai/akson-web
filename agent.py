@@ -1,6 +1,7 @@
 import os
 import datetime
 from textwrap import dedent
+from typing import Sequence
 
 from pydantic import Field
 from openai import AzureOpenAI
@@ -9,6 +10,7 @@ from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
 )
 
 from function_calling import Toolset, Function
@@ -25,7 +27,7 @@ class MessageAgent(Function):
         import registry
 
         agent = registry.get(self.agent)
-        reply = agent.message(self.context.agent, self.message)
+        reply = agent.message(self.message, sender=self.context.agent, session_id=None)
         return f"The message is sent to the agent. The reply is:\n{reply}"
 
 
@@ -34,6 +36,29 @@ class CurrentTime(Function):
 
     def run(self):
         return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+Thread = list[ChatCompletionMessageParam]
+
+
+class Threads:
+
+    def __init__(self, system_prompt: str):
+        self.system_prompt = system_prompt
+        self.store: dict[str, Thread] = {}
+
+    def get(self, session_id: str | None) -> Thread:
+        if not session_id:
+            return self._create()
+        try:
+            return self.store[session_id]
+        except KeyError:
+            thread = self._create()
+            self.store[session_id] = thread
+            return thread
+
+    def _create(self) -> Thread:
+        return [ChatCompletionSystemMessageParam(role="system", content=self.system_prompt)]
 
 
 class Agent:
@@ -49,43 +74,48 @@ class Agent:
         self.name = name
         self.description = dedent(description).strip()
         self.prompt = dedent(prompt).strip()
+        self.tools = tools
+
         self.toolset = Toolset(self, *tools)
         self.client = AzureOpenAI()
-        self.messages: list[ChatCompletionMessageParam] = [
-            ChatCompletionSystemMessageParam(role="system", content=self.prompt)
-        ]
+        self.threads = Threads(self.prompt)
+
+        # TODO move registration to main.py
         import registry; registry.register(self)  # fmt: skip  # noqa  # prevents circular import
 
-    def message(self, sender: str, input: str) -> str | None:
+    def message(self, input: str, *, sender: str, session_id: str | None) -> str | None:
         logger.warning("%s -> %s: %s", sender, self.name, input)
 
-        completion = self._complete(ChatCompletionUserMessageParam(role="user", content=input))
+        thread = self.threads.get(session_id)
+
+        completion = self._complete([ChatCompletionUserMessageParam(role="user", content=input)], thread)
         tool_calls = self.toolset.process_response(completion, self.name)
         while tool_calls:
-            completion = self._complete(*tool_calls)
+            completion = self._complete(tool_calls, thread)
             tool_calls = self.toolset.process_response(completion, self.name)
 
-        message = completion.choices[0].message
-        self.messages.append({"role": message.role, "content": message.content})
+        return completion.choices[0].message.content
 
-        return message.content
-
-    def _complete(self, *messages: ChatCompletionMessageParam) -> ChatCompletion:
-        self.messages.extend(messages)
+    def _complete(self, messages: Sequence[ChatCompletionMessageParam], thread: Thread) -> ChatCompletion:
+        thread.extend(messages)
 
         logger.info("Completing chat for %s", self.name)
-        for message in self.messages:
+        for message in thread:
             logger.debug(message)
 
         completion = self.client.chat.completions.create(
             model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
-            messages=self.messages,
+            messages=thread,
             **self._tool_kwargs(),
         )
 
         message = completion.choices[0].message
-        logger.info("%s: %s", self.name, message.content)
-        self.messages.append(message)
+        thread.append(
+            ChatCompletionAssistantMessageParam(
+                role="assistant", content=message.content, tool_calls=message.tool_calls
+            )
+        )
+        logger.debug(thread[-1])
 
         return completion
 

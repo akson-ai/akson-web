@@ -55,7 +55,7 @@ class Toolset:
 
         tool_calls = completion.choices[0].message.tool_calls
         if not tool_calls:
-            logger.info("No tool calls")
+            logger.debug("No tool calls")
             return []
 
         logger.info("Number of tool calls: %s", len(tool_calls))
