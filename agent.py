@@ -1,6 +1,5 @@
 import os
 import datetime
-from abc import ABC
 from textwrap import dedent
 from typing import Any
 
@@ -38,30 +37,20 @@ class CurrentTime(Function):
         return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-class Agent(ABC):
+class Agent:
 
-    name: str
-    """Name of the agent. Must be unique. Other agents use this name to refer to it."""
-
-    description: str
-    """Description of the agent. It tells what the agent can do. Used during planning."""
-
-    system: bool = False
-    """System agents are not intended to be used by end users.
-    Registry does not return system agents in the list of agents."""
-
-    prompt: str
-    """Prompt for the agent. They are instructions for the agent. """
-
-    tools: list[type[Function]] = []
-    """List of tools the agent can use."""
-
-    def __init__(self):
-        super().__init__()
-
-        self.toolset = Toolset(self, *self.tools)
-        self.description = dedent(self.description).strip()
-        self.prompt = dedent(self.prompt).strip()
+    def __init__(self, name: str, description: str, prompt: str, tools: list[type[Function]] = []):
+        """
+        Args:
+            name: Name of the agent. Must be unique. Other agents use this name to refer to it.
+            description: Description of the agent. It tells what the agent can do. Used during planning.
+            prompt: Prompt for the agent. They are instructions for the agent.
+            tools: List of tools the agent can use.
+        """
+        self.name = name
+        self.description = dedent(description).strip()
+        self.prompt = dedent(prompt).strip()
+        self.toolset = Toolset(self, *tools)
         self.client = AzureOpenAI()
         self.messages: list[ChatCompletionMessageParam] = [
             ChatCompletionSystemMessageParam(role="system", content=self.prompt)
