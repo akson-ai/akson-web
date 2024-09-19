@@ -31,7 +31,9 @@ async def index():
         </head>
         <body>
             <h1>Agents</h1>
-            {"<br>\n".join([f"<a href='/chat/{agent.name}'>{agent.name}</a>" for agent in agents.values()])}
+            <ul>
+            {"".join([f"<li><a href='/chat/{agent}'>{agent}</a></li>" for agent in sorted(agents.keys())])}
+            </ul>
         </body>
     </html>
     """
