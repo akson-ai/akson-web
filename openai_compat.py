@@ -1,8 +1,14 @@
 import random
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from typing_extensions import Literal
+from openai.types.chat import (
+    ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+)
 
 from agent import Agent
 
@@ -46,9 +52,8 @@ def setup_routes(app: FastAPI, agents: dict[str, Agent]):
         except KeyError:
             raise HTTPException(status_code=404, detail="Agent not found")
 
-        # TODO call completion api
-        content = agent.message(request.messages[-1].content, sender="Human", session_id=None)
-        assert isinstance(content, str)
+        messages = _convert_messages(request.messages)
+        content = agent.complete(messages)
 
         completion_tokens = len(content.split())
         prompt_tokens = sum(len(msg.content.split()) for msg in request.messages)
@@ -67,3 +72,17 @@ def setup_routes(app: FastAPI, agents: dict[str, Agent]):
         )
 
     app.add_api_route("/v1/chat/completions", chat_completions, methods=["POST"], response_model=ChatCompletionResponse)
+
+
+def _convert_messages(messages: list[Message]) -> list[ChatCompletionMessageParam]:
+    ret = []
+    for message in messages:
+        if message.role == "system":
+            ret.append(ChatCompletionSystemMessageParam(role="system", content=message.content))
+        elif message.role == "user":
+            ret.append(ChatCompletionUserMessageParam(role="user", content=message.content))
+        elif message.role == "assistant":
+            ret.append(ChatCompletionAssistantMessageParam(role="assistant", content=message.content))
+        else:
+            raise ValueError(f"Unknown role: {message.role}")
+    return ret

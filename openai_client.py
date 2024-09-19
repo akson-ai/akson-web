@@ -1,6 +1,5 @@
 from openai import OpenAI
 
-# Configure the client to use our mock API
 client = OpenAI(
     api_key="sk-mock-api-key",  # This can be any string for our mock API
     base_url="http://localhost:8000/v1",  # Assumes the mock API is running on localhost:8000
@@ -8,18 +7,13 @@ client = OpenAI(
 
 
 def chat_with_mock_api(agent: str, message: str):
-    # Create a chat completion request
     response = client.chat.completions.create(
         model=agent,
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": message},
-        ],
+        messages=[{"role": "user", "content": message}],
         temperature=0.7,
         max_tokens=50,
     )
 
-    # Print the response
     print("Mock API Response:")
     print(f"ID: {response.id}")
     print(f"Created: {response.created}")

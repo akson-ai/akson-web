@@ -47,7 +47,7 @@ class Toolset:
         """Returns the list of tools to be passed into completion reqeust."""
         return [pydantic_function_tool(tool) for tool in self.tools]
 
-    def process_response(self, completion: ChatCompletion, agent: str) -> list[ChatCompletionToolMessageParam]:
+    def process_response(self, completion: ChatCompletion, *, agent: str) -> list[ChatCompletionToolMessageParam]:
         """This is called each time a response is received from completion method."""
         completion = parse_chat_completion(
             chat_completion=completion, input_tools=self.openai_schema(), response_format=NOT_GIVEN

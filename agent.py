@@ -1,7 +1,6 @@
 import os
 import datetime
 from textwrap import dedent
-from typing import Sequence
 
 from pydantic import Field
 from openai import AzureOpenAI
@@ -80,22 +79,39 @@ class Agent:
         self.client = AzureOpenAI()
         self.threads = Threads(self.prompt)
 
-    def message(self, input: str, *, sender: str, session_id: str | None) -> str | None:
+    def message(self, input: str, *, sender: str, session_id: str | None) -> str:
+        """Sends a message to the agent. Remembers previous messages."""
         logger.warning("%s -> %s: %s", sender, self.name, input)
 
         thread = self.threads.get(session_id)
+        thread.append(ChatCompletionUserMessageParam(role="user", content=input))
 
-        completion = self._complete([ChatCompletionUserMessageParam(role="user", content=input)], thread)
-        tool_calls = self.toolset.process_response(completion, self.name)
-        while tool_calls:
-            completion = self._complete(tool_calls, thread)
-            tool_calls = self.toolset.process_response(completion, self.name)
+        return self.complete(thread)
 
-        return completion.choices[0].message.content
+    def complete(self, messages: list[ChatCompletionMessageParam]) -> str:
+        """OpenAI compatible chat completion method. Automatically calls tools."""
 
-    def _complete(self, messages: Sequence[ChatCompletionMessageParam], thread: Thread) -> ChatCompletion:
+        # Do not allow the caller to set system prompt
+        for message in messages:
+            if message["role"] not in ["user", "assistant"]:
+                return 'Sorry, only "user" and "assistant" roles are supported.'
+
+        # Create a new thread with system prompt
+        thread = self.threads.get(None)
         thread.extend(messages)
 
+        completion = self._complete(thread)
+        tool_calls = self.toolset.process_response(completion, agent=self.name)
+        while tool_calls:
+            thread.extend(tool_calls)
+            completion = self._complete(thread)
+            tool_calls = self.toolset.process_response(completion, agent=self.name)
+
+        content = completion.choices[0].message.content
+        assert isinstance(content, str)
+        return content
+
+    def _complete(self, thread: Thread) -> ChatCompletion:
         logger.info("Completing chat for %s", self.name)
         for message in thread:
             logger.debug(message)
