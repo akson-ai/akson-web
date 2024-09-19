@@ -21,7 +21,7 @@ openai_compat.setup_routes(app, agents)
 
 for agent in agents.values():
     registry.register(agent)
-    gr.mount_gradio_app(app, chat_interface.create(agent), f"/chat/{agent.name}")
+    gr.mount_gradio_app(app, chat_interface.create(agent), f"/agents/{agent.name}")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -37,7 +37,7 @@ async def index():
             <body>
                 <h1>Agents</h1>
                 <ul>
-                {"".join([f"<li><a href='/chat/{agent}'>{agent}</a></li>" for agent in sorted(agents.keys())])}
+                {"".join([f"<li><a href='/agents/{agent}'>{agent}</a></li>" for agent in sorted(agents.keys())])}
                 </ul>
             </body>
         </html>
