@@ -1,10 +1,13 @@
 import os
+import random
 import importlib
+from typing import Literal
 
 import gradio as gr
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, Field
 
 from agent import Agent
 from logger import logger
@@ -58,3 +61,62 @@ for agent_file in os.listdir(agents_dir):
     logger.info("Agent loaded: %s", agent.name)
     interface = create_chat_interface(agent)
     gr.mount_gradio_app(app, interface, f"/chat/{agent.name}")
+
+
+class Message(BaseModel):
+    role: Literal["system", "user", "assistant"]
+    content: str
+
+
+class ChatCompletionRequest(BaseModel):
+    model: str
+    messages: list[Message]
+    temperature: float = Field(default=1.0, ge=0.0, le=2.0)
+
+
+class Choice(BaseModel):
+    index: int
+    message: Message
+    finish_reason: str
+
+
+class Usage(BaseModel):
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+
+class ChatCompletionResponse(BaseModel):
+    id: str
+    object: str
+    created: int
+    model: str
+    choices: list[Choice]
+    usage: Usage
+
+
+@app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
+async def chat_completions(request: ChatCompletionRequest):
+    try:
+        agent = agents[request.model]
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    content = agent.message("User", request.messages[-1].content)
+    assert isinstance(content, str)
+
+    completion_tokens = len(content.split())
+    prompt_tokens = sum(len(msg.content.split()) for msg in request.messages)
+
+    return ChatCompletionResponse(
+        id=f"chatcmpl-{random.randint(1000000, 9999999)}",
+        object="chat.completion",
+        created=int(random.random() * 1000000000),
+        model=request.model,
+        choices=[Choice(index=0, message=Message(role="assistant", content=content), finish_reason="stop")],
+        usage=Usage(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens,
+        ),
+    )
