@@ -3,7 +3,7 @@ from textwrap import dedent
 import gradio as gr
 from dotenv import load_dotenv
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 
 import registry
 import openai_compat
@@ -24,8 +24,13 @@ for agent in agents.values():
     gr.mount_gradio_app(app, chat_interface.create(agent), f"/agents/{agent.name}")
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def index():
+    return RedirectResponse("/agents")
+
+
+@app.get("/agents", response_class=HTMLResponse)
+async def get_agents():
     return dedent(
         f"""
         <!DOCTYPE html>
