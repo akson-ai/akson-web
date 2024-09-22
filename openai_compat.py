@@ -67,6 +67,8 @@ def chat_streaming_chunk(response: ChatCompletionResponse, content: str, *, fini
 
 def setup_routes(app: FastAPI, agents: dict[str, Agent]):
     async def chat_completions(request: ChatCompletionRequest):
+        if request.model == "gpt-4o":
+            request.model = "ChatGPT"
         try:
             agent = agents[request.model]
         except KeyError:
