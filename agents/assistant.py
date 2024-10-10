@@ -2,12 +2,13 @@ import os
 from typing import Literal
 
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import AzureChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
+from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
 from agent import Agent
@@ -38,6 +39,8 @@ class AgentState(MessagesState):
     intent: str
     task: str
     plan: Plan
+    step: int
+    execution_result: str
 
 
 def detect_intent(state: AgentState):
@@ -151,7 +154,7 @@ def planner(state: AgentState):
     response = chain.invoke(
         {
             "task": state["task"],
-            "tools": ", ".join([str(tool) for tool in tools]),
+            "tools": ", ".join(tools.keys()),
         }
     )
     assert isinstance(response, DivideSubtasks)
@@ -160,18 +163,39 @@ def planner(state: AgentState):
 
 
 def executor(state: AgentState):
-    messages = []
-    for step in state["plan"].subtasks:
-        messages.append(f"Executing: {step.subtask} with {step.tool}")
+    plan = state["plan"]
+    i = state.get("step", 0)
+    execution_result = state.get("execution_result", "")
+    step = plan.subtasks[i]
+    print(f"Executing step: {i}, tool: {step.tool}, subtask: {step.subtask}")
 
-    return {
-        "messages": "\n".join(messages),
-        "task": None,
-        "plan": None,
-    }
+    system_prompt = """
+        You are a helpful assistant for executing tasks with the given tools.
+    """
+    user_message = """
+        # Output of previous step:
+        {output}
+
+        # Your Task
+        {task}
+    """.format(
+        output=execution_result, task=step.subtask
+    )
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=user_message),
+    ]
+    react = create_react_agent(model, tools=[tools[step.tool]])
+    response = react.invoke({"messages": messages})
+    reply = response["messages"] = response["messages"][-1].content
+    return {"execution_result": reply, "step": i + 1}
 
 
 def respond(state: AgentState):
+    execution_result = state.get("execution_result")
+    if execution_result:
+        return {"messages": [HumanMessage(content=execution_result)]}
+
     system_prompt = """
         You are a helpful AI assistant.
         Keep a conversation going with the user.
@@ -191,7 +215,14 @@ def route_task(state: AgentState) -> str:
     if state["intent"] == "task":
         return "extract_task"
     else:
-        return END
+        return "respond"
+
+
+def execution_finished(state: AgentState) -> str:
+    if state["step"] == len(state["plan"].subtasks):
+        return "respond"
+    else:
+        return "executor"
 
 
 def create_graph():
@@ -200,13 +231,14 @@ def create_graph():
     graph.add_node(detect_intent)
     graph.add_node(extract_task)
     graph.add_node(planner)
+    graph.add_node(executor)
     graph.add_node(respond)
 
     graph.add_edge(START, "detect_intent")
     graph.add_conditional_edges("detect_intent", route_task)
-
     graph.add_edge("extract_task", "planner")
-    graph.add_edge("planner", "respond")
+    graph.add_edge("planner", "executor")
+    graph.add_conditional_edges("executor", execution_finished)
 
     graph.add_edge("respond", END)
 
