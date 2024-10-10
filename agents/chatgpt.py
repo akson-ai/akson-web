@@ -38,4 +38,4 @@ class ChatGPT(Agent):
         return response.content
 
 
-agent = ChatGPT()
+chatgpt = ChatGPT()

@@ -1,14 +1,21 @@
 import os
+from typing import Literal
 
-from langchain_core.messages import AIMessage, HumanMessage
+from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.tools import tool
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import AzureChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from agent import Agent
+from loader import load_tools
+
+load_dotenv()
+
+tools = load_tools()
 
 model = AzureChatOpenAI(
     azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
@@ -16,27 +23,6 @@ model = AzureChatOpenAI(
     api_version=os.environ["OPENAI_API_VERSION"],
     temperature=0,
 )
-
-
-@tool
-def search_web(query: str):
-    """Call to surf the web."""
-    return "TODO"
-
-
-@tool
-def send_email(to: str, subject: str, body: str):
-    """Send an email."""
-    return "TODO"
-
-
-@tool
-def ask_llm(question: str):
-    """Ask the LLM a question."""
-    return "TODO"
-
-
-tools = [search_web, send_email, ask_llm]
 
 
 class Subtask(BaseModel):
@@ -49,35 +35,94 @@ class Plan(BaseModel):
 
 
 class AgentState(MessagesState):
+    intent: str
     task: str
     plan: Plan
 
 
-def extract_task(state: AgentState):
-    class ExtractTask(BaseModel):
-        task: str | None
-        response: str
+def detect_intent(state: AgentState):
+
+    class UserIntent(BaseModel):
+        intent: Literal[
+            "greeting",  # To recognize when a user is initiating conversation.
+            "farewell",  # To handle when a user is concluding conversation.
+            "question",  # When a user asks for information (e.g., "What is the weather today?").
+            "task",  # Users might initiate or assign tasks (e.g., "Schedule a meeting").
+            "suggestion",  # To handle when users propose ideas or recommendations (e.g., "Can we try this solution?").
+            "answer",  # For user inputs responding to prior questions (e.g., "The answer is 42").
+            "solution",  # When users provide a fix or resolution (e.g., "Use method X to solve that").
+            "feedback",  # Handling user inputs that provide opinions or feedback (e.g., "This solution works well").
+            "clarification",  # Recognizing when users seek more information (e.g., "What do you mean by that?").
+            "confirmation",  # When users indicate agreement or approval (e.g., "Yes, that works").
+            "negation",  # To handle denial or disagreement (e.g., "No, that's not correct").
+            "chit_chat",  # For general small talk or social interactions (e.g., "How are you doing?").
+            "other",  # For any other intents that are not explicitly defined.
+        ] = Field(description="User's intent in the last message")
 
     system_prompt = """
-        You are an AI assistant that helps the user with their task.
-        Keep a conversation going with the user.
-        If the user asks for a task, respond with the task.
+        You are intent recognizer.
+        You will be given a chat history and user input.
+        Recognize the intent of the user input.
+    """
+    user_message = """
+        # Message History
+
+        {% for message in history -%}
+        {{ message.type }}: {{ message.content }}
+        {% endfor %}
+
+        # User Input:
+        {{ user_input.content }}
+    """
+    prompt = ChatPromptTemplate(
+        [
+            ("system", system_prompt),
+            ("human", user_message),
+        ],
+        template_format="jinja2",
+    )
+    llm = model.with_structured_output(UserIntent)
+    chain = prompt | llm
+    *history, last_message = state["messages"]
+    response = chain.invoke({"history": history, "user_input": last_message})
+    assert isinstance(response, UserIntent)
+    print(f"Intent: {response.intent}")
+    return {"intent": response.intent}
+
+
+def extract_task(state: AgentState):
+    class ExtractTask(BaseModel):
+        task: str
+
+    system_prompt = """
+        You are task extractor.
+        You will be given a chat history and user input.
+        Extract the task from the user input.
+    """
+    user_message = """
+        # Message History
+
+        {% for message in history -%}
+        {{ message.type }}: {{ message.content }}
+        {% endfor %}
+
+        # User Input:
+        {{ user_input.content }}
     """
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", system_prompt),
-            ("placeholder", "{messages}"),
-        ]
+            ("human", user_message),
+        ],
+        template_format="jinja2",
     )
     llm = model.with_structured_output(ExtractTask)
     chain = prompt | llm
-    response = chain.invoke({"messages": state["messages"]})
+    *history, last_message = state["messages"]
+    response = chain.invoke({"history": history, "user_input": last_message})
     assert isinstance(response, ExtractTask)
-    print(f"Task: {response.task}, Response: {response.response}")
-    if response.task:
-        return {"task": response.task}
-    else:
-        return {"messages": [AIMessage(content=response.response)]}
+    print(f"Task: {response.task}")
+    return {"task": response.task}
 
 
 def planner(state: AgentState):
@@ -91,25 +136,27 @@ def planner(state: AgentState):
         You have access to the following tools:
         {tools}
     """
+    user_message = """
+        Your task is: {task}
+        You have access to the following tools: {tools}
+    """
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", system_prompt),
-            ("placeholder", "{messages}"),
+            ("human", user_message),
         ]
     )
     llm = model.with_structured_output(DivideSubtasks)
     chain = prompt | llm
     response = chain.invoke(
         {
-            "messages": [HumanMessage(content=f"Task: {state['task']}")],
-            "tools": tools,
+            "task": state["task"],
+            "tools": ", ".join([str(tool) for tool in tools]),
         }
     )
     assert isinstance(response, DivideSubtasks)
     print(f"Plan: {response.plan}")
-    return {
-        "plan": response.plan,
-    }
+    return {"plan": response.plan}
 
 
 def executor(state: AgentState):
@@ -119,13 +166,30 @@ def executor(state: AgentState):
 
     return {
         "messages": "\n".join(messages),
+        "task": None,
         "plan": None,
     }
 
 
+def respond(state: AgentState):
+    system_prompt = """
+        You are a helpful AI assistant.
+        Keep a conversation going with the user.
+    """
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            ("placeholder", "{messages}"),
+        ]
+    )
+    chain = prompt | model
+    response = chain.invoke({"messages": state["messages"]})
+    return {"messages": [response]}
+
+
 def route_task(state: AgentState) -> str:
-    if state.get("task"):
-        return "planner"
+    if state["intent"] == "task":
+        return "extract_task"
     else:
         return END
 
@@ -133,14 +197,18 @@ def route_task(state: AgentState) -> str:
 def create_graph():
     graph = StateGraph(AgentState)
 
+    graph.add_node(detect_intent)
     graph.add_node(extract_task)
     graph.add_node(planner)
-    graph.add_node(executor)
+    graph.add_node(respond)
 
-    graph.add_edge(START, "extract_task")
-    graph.add_conditional_edges("extract_task", route_task)
-    graph.add_edge("planner", "executor")
-    graph.add_edge("executor", END)
+    graph.add_edge(START, "detect_intent")
+    graph.add_conditional_edges("detect_intent", route_task)
+
+    graph.add_edge("extract_task", "planner")
+    graph.add_edge("planner", "respond")
+
+    graph.add_edge("respond", END)
 
     checkpointer = MemorySaver()
     return graph.compile(checkpointer=checkpointer)
@@ -155,11 +223,10 @@ class Assistant(Agent):
         self.graph = create_graph()
 
     def message(self, input: str, *, session_id: str | None) -> str:
-        final_state = self.graph.invoke(
-            {"messages": [HumanMessage(content=input)]},
-            config={"configurable": {"thread_id": session_id}},
-        )
-        return final_state["messages"][-1].content
+        config: RunnableConfig = {"configurable": {"thread_id": session_id}}
+        state = {"messages": [HumanMessage(content=input)]}
+        state = self.graph.invoke(state, config=config)
+        return state["messages"][-1].content
 
 
-agent = Assistant()
+assistant = Assistant()
