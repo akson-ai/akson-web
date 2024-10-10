@@ -1,25 +1,39 @@
 import importlib
 import os
+from typing import TypeVar
+
+from langchain_core.tools.structured import StructuredTool
 
 from agent import Agent
 from logger import logger
 
 
 def load_agents() -> dict[str, Agent]:
-    agents = {}
-    agents_dir = os.path.join(os.path.dirname(__file__), "agents")
-    logger.info("Agents directory: %s", agents_dir)
-    for agent_file in os.listdir(agents_dir):
-        agent_file = os.path.basename(agent_file)
-        module_name, extension = os.path.splitext(agent_file)
+    return load_objects(Agent, "agents")
+
+
+def load_tools() -> dict[str, StructuredTool]:
+    return load_objects(StructuredTool, "tools")
+
+
+T = TypeVar("T")
+
+
+def load_objects(object_type: type[T], dirname: str) -> dict[str, T]:
+    objects = {}
+    objects_dir = os.path.join(os.path.dirname(__file__), dirname)
+    logger.info("Loading objects from directory: %s", objects_dir)
+    for object_file in os.listdir(objects_dir):
+        object_file = os.path.basename(object_file)
+        module_name, extension = os.path.splitext(object_file)
         if extension != ".py":
             continue
-        module_name = f"agents.{module_name}"
-        logger.info("Loading file: %s", agent_file)
+        logger.info("Loading file: %s", object_file)
+        module_name = f"{dirname}.{module_name}"
         module = importlib.import_module(module_name)
-        agent = module.agent
-        if not isinstance(agent, Agent):
-            continue
-        agents[agent.name] = agent
-        logger.info("Agent loaded: %s", agent.name)
-    return agents
+        for key, value in vars(module).items():
+            if not isinstance(value, object_type):
+                continue
+            objects[key] = value
+            logger.info("Object loaded: %s", key)
+    return objects
