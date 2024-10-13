@@ -3,13 +3,12 @@ from textwrap import dedent
 import gradio as gr
 from dotenv import load_dotenv
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
-import registry
-import openai_compat
 import chat_interface
+import openai_compat
+import registry
 from loader import load_agents
-
 
 load_dotenv()
 
