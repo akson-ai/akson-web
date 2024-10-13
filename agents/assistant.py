@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Literal
 
 from dotenv import load_dotenv
@@ -169,8 +170,10 @@ def executor(state: AgentState):
     step = plan.subtasks[i]
     print(f"Executing step: {i}, tool: {step.tool}, subtask: {step.subtask}")
 
-    system_prompt = """
+    system_prompt = f"""
         You are a helpful assistant for executing tasks with the given tools.
+
+        Current date and time: {datetime.now().isoformat()}
     """
     user_message = """
         # Output of previous step:
