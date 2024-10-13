@@ -13,7 +13,7 @@ def send_email(to: str, subject: str, body: str):
     msg["From"] = os.environ["ZOHO_SMTP_EMAIL"]
     msg["To"] = to
     msg["Subject"] = subject
-    msg.attach(MIMEText(body, "text"))
+    msg.attach(MIMEText(body, "plain"))
 
     with smtplib.SMTP_SSL("smtp.zoho.com", 465) as server:
         server.login(os.environ["ZOHO_SMTP_EMAIL"], os.environ["ZOHO_SMTP_PASSWORD"])
