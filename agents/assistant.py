@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Literal
 
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import AzureChatOpenAI
@@ -197,7 +197,7 @@ def executor(state: AgentState):
 def respond(state: AgentState):
     execution_result = state.get("execution_result")
     if execution_result:
-        return {"messages": [HumanMessage(content=execution_result)]}
+        return {"messages": [AIMessage(content=execution_result)]}
 
     system_prompt = """
         You are a helpful AI assistant.
