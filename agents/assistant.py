@@ -15,6 +15,16 @@ from pydantic import BaseModel, Field
 from agent import Agent
 from loader import load_tools
 
+from .prompts import (
+    aggregate_prompt,
+    black_hat_prompt,
+    blue_hat_prompt,
+    green_hat_prompt,
+    red_hat_prompt,
+    white_hat_prompt,
+    yellow_hat_prompt,
+)
+
 load_dotenv()
 
 tools = load_tools()
@@ -52,6 +62,7 @@ def detect_intent(state: AgentState):
             "farewell",  # To handle when a user is concluding conversation.
             "question",  # When a user asks for information (e.g., "What is the weather today?").
             "task",  # Users might initiate or assign tasks (e.g., "Schedule a meeting").
+            "decision",  # For decisions (e.g., "What do you think about that?").
             "suggestion",  # To handle when users propose ideas or recommendations (e.g., "Can we try this solution?").
             "answer",  # For user inputs responding to prior questions (e.g., "The answer is 42").
             "solution",  # When users provide a fix or resolution (e.g., "Use method X to solve that").
@@ -194,6 +205,31 @@ def executor(state: AgentState):
     return {"execution_result": reply, "step": i + 1}
 
 
+def decision_maker(state: AgentState):
+    perspectives = ""
+    for system_prompt, name in [
+        (blue_hat_prompt, "blue_hat"),
+        (green_hat_prompt, "green_hat"),
+        (red_hat_prompt, "red_hat"),
+        (yellow_hat_prompt, "yellow_hat"),
+        (white_hat_prompt, "white_hat"),
+        (black_hat_prompt, "black_hat"),
+    ]:
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=state["messages"][-1].content),
+        ]
+        response = model.invoke(messages)
+        perspectives += f"<{name}>\n{response.content}\n</{name}>\n\n"
+
+    messages = [
+        SystemMessage(content=aggregate_prompt),
+        HumanMessage(content=perspectives),
+    ]
+    response = model.invoke(messages)
+    return {"messages": [response]}
+
+
 def respond(state: AgentState):
     execution_result = state.get("execution_result")
     if execution_result:
@@ -217,6 +253,8 @@ def respond(state: AgentState):
 def route_task(state: AgentState) -> str:
     if state["intent"] == "task":
         return "extract_task"
+    if state["intent"] == "decision":
+        return "decision_maker"
     else:
         return "respond"
 
@@ -233,6 +271,7 @@ def create_graph():
 
     graph.add_node(detect_intent)
     graph.add_node(extract_task)
+    graph.add_node(decision_maker)
     graph.add_node(planner)
     graph.add_node(executor)
     graph.add_node(respond)
@@ -242,6 +281,8 @@ def create_graph():
     graph.add_edge("extract_task", "planner")
     graph.add_edge("planner", "executor")
     graph.add_conditional_edges("executor", execution_finished)
+
+    graph.add_edge("decision_maker", END)
 
     graph.add_edge("respond", END)
 
