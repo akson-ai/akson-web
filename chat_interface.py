@@ -13,7 +13,7 @@ def create(agent: Agent) -> gr.Blocks:
         assistant_message = {"role": "assistant", "content": reply}
         yield history + [user_message, assistant_message]
 
-    with gr.Blocks() as demo:
+    with gr.Blocks(title=agent.name) as demo:
         gr.Markdown(f"<h1 style='text-align: center; margin-bottom: 1rem'>{agent.name}</h1>")
         gr.Markdown(f"<p style='text-align: center'>{agent.description}</p>")
         chatbot = gr.Chatbot(type="messages")
