@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+from typing import Generator
+
+import gradio as gr
 
 
 class Agent(ABC):
@@ -13,5 +16,5 @@ class Agent(ABC):
         return f"Agent<{self.name}>"
 
     @abstractmethod
-    def message(self, input: str, *, session_id: str | None) -> str:
+    def message(self, input: str, *, session_id: str | None) -> Generator[str | gr.Image, None, None]:
         """Sends a message to the agent. Agents should remember previous messages."""

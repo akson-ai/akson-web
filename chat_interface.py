@@ -8,10 +8,13 @@ from agent import Agent
 def create(agent: Agent) -> gr.Blocks:
     def respond(prompt: str, history: list[dict[str, str]]) -> Generator[list[dict[str, str]], None, None]:
         user_message = {"role": "user", "content": prompt}
-        yield history + [user_message]
-        reply = agent.message(prompt, session_id="gradio")
-        assistant_message = {"role": "assistant", "content": reply}
-        yield history + [user_message, assistant_message]
+        history.append(user_message)
+        yield history
+
+        for reply in agent.message(prompt, session_id="gradio"):
+            assistant_message = {"role": "assistant", "content": reply}
+            history.append(assistant_message)
+            yield history
 
     with gr.Blocks(title=agent.name) as demo:
         gr.Markdown(f"<h1 style='text-align: center; margin-bottom: 1rem'>{agent.name}</h1>")

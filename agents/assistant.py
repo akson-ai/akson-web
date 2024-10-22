@@ -1,7 +1,9 @@
+import io
 import os
 from datetime import datetime
-from typing import Literal
+from typing import Generator, Literal
 
+import gradio as gr
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -10,6 +12,7 @@ from langchain_openai import AzureChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import create_react_agent
+from PIL import Image
 from pydantic import BaseModel, Field
 
 from agent import Agent
@@ -102,7 +105,10 @@ def detect_intent(state: AgentState):
     response = chain.invoke({"history": history, "user_input": last_message})
     assert isinstance(response, UserIntent)
     print(f"Intent: {response.intent}")
-    return {"intent": response.intent}
+    return {
+        "intent": response.intent,
+        "messages": [AIMessage(content=f"I detected your intent as {response.intent}")],
+    }
 
 
 def extract_task(state: AgentState):
@@ -298,11 +304,17 @@ class Assistant(Agent):
     def __init__(self):
         self.graph = create_graph()
 
-    def message(self, input: str, *, session_id: str | None) -> str:
+    def message(self, input: str, *, session_id: str | None) -> Generator[str | gr.Image, None, None]:
+        png_bytes = self.graph.get_graph().draw_mermaid_png()
+        yield gr.Image(Image.open(io.BytesIO(png_bytes)))
+
         config: RunnableConfig = {"configurable": {"thread_id": session_id}}
         state = {"messages": [HumanMessage(content=input)]}
-        state = self.graph.invoke(state, config=config)
-        return state["messages"][-1].content
+        for state in self.graph.stream(state, stream_mode="updates", config=config):
+            for node, values in state.items():
+                print(f"node: {node}, state_update: {values}")
+                if "messages" in values:
+                    yield values["messages"][0].content
 
 
 assistant = Assistant()
