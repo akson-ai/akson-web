@@ -256,7 +256,7 @@ def respond(state: AgentState):
     return {"messages": [response]}
 
 
-def route_task(state: AgentState) -> str:
+def route_task(state: AgentState) -> Literal["extract_task", "decision_maker", "respond"]:
     if state["intent"] == "task":
         return "extract_task"
     if state["intent"] == "decision":
@@ -265,7 +265,7 @@ def route_task(state: AgentState) -> str:
         return "respond"
 
 
-def execution_finished(state: AgentState) -> str:
+def execution_finished(state: AgentState) -> Literal["executor", "respond"]:
     if state["step"] == len(state["plan"].subtasks):
         return "respond"
     else:
