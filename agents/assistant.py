@@ -143,7 +143,10 @@ def extract_task(state: AgentState):
     response = chain.invoke({"history": history, "user_input": last_message})
     assert isinstance(response, ExtractTask)
     print(f"Task: {response.task}")
-    return {"task": response.task}
+    return {
+        "task": response.task,
+        "messages": [AIMessage(content=f"I detected your task as {response.task}")],
+    }
 
 
 def planner(state: AgentState):
@@ -177,7 +180,13 @@ def planner(state: AgentState):
     )
     assert isinstance(response, DivideSubtasks)
     print(f"Plan: {response.plan}")
-    return {"plan": response.plan}
+    subtasks = "\n".join([f"{i+1}. {subtask.subtask}" for i, subtask in enumerate(response.plan.subtasks)])
+    return {
+        "plan": response.plan,
+        "messages": [
+            AIMessage(content=f"I divided your task into {len(response.plan.subtasks)} subtasks:\n{subtasks}"),
+        ],
+    }
 
 
 def executor(state: AgentState):
@@ -208,7 +217,11 @@ def executor(state: AgentState):
     react = create_react_agent(model, tools=[tools[step.tool]])
     response = react.invoke({"messages": messages})
     reply = response["messages"] = response["messages"][-1].content
-    return {"execution_result": reply, "step": i + 1}
+    return {
+        "step": i + 1,
+        "execution_result": reply,
+        "messages": [AIMessage(content=f"Task {i+1} completed.")],
+    }
 
 
 def decision_maker(state: AgentState):
@@ -236,7 +249,7 @@ def decision_maker(state: AgentState):
     return {"messages": [response]}
 
 
-def respond(state: AgentState):
+def ask_llm(state: AgentState):
     execution_result = state.get("execution_result")
     if execution_result:
         return {"messages": [AIMessage(content=execution_result)]}
@@ -256,18 +269,18 @@ def respond(state: AgentState):
     return {"messages": [response]}
 
 
-def route_task(state: AgentState) -> Literal["extract_task", "decision_maker", "respond"]:
+def route_task(state: AgentState) -> Literal["extract_task", "decision_maker", "ask_llm"]:
     if state["intent"] == "task":
         return "extract_task"
     if state["intent"] == "decision":
         return "decision_maker"
     else:
-        return "respond"
+        return "ask_llm"
 
 
-def execution_finished(state: AgentState) -> Literal["executor", "respond"]:
+def execution_finished(state: AgentState) -> Literal["executor", "ask_llm"]:
     if state["step"] == len(state["plan"].subtasks):
-        return "respond"
+        return "ask_llm"
     else:
         return "executor"
 
@@ -280,17 +293,15 @@ def create_graph():
     graph.add_node(decision_maker)
     graph.add_node(planner)
     graph.add_node(executor)
-    graph.add_node(respond)
+    graph.add_node(ask_llm)
 
     graph.add_edge(START, "detect_intent")
     graph.add_conditional_edges("detect_intent", route_task)
     graph.add_edge("extract_task", "planner")
     graph.add_edge("planner", "executor")
     graph.add_conditional_edges("executor", execution_finished)
-
     graph.add_edge("decision_maker", END)
-
-    graph.add_edge("respond", END)
+    graph.add_edge("ask_llm", END)
 
     checkpointer = MemorySaver()
     return graph.compile(checkpointer=checkpointer)
@@ -314,7 +325,8 @@ class Assistant(Agent):
             for node, values in state.items():
                 print(f"node: {node}, state_update: {values}")
                 if "messages" in values:
-                    yield values["messages"][0].content
+                    for message in values["messages"]:
+                        yield message.content
 
 
 assistant = Assistant()
