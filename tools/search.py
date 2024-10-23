@@ -12,17 +12,16 @@ def search_web(query: str):
 
     response = exa.search_and_contents(
         query,
-        num_results=5,
+        num_results=10,
         use_autoprompt=True,
-        text={"max_characters": 1000},
-        highlights=True,
+        summary=True,
     )
 
     output = ""
     for result in response.results:
         output += f"Title: {result.title}"
         output += f"URL: {result.url}"
-        output += f"Text snippet: {result.text[:200]}..."
+        output += f"Summary: {result.summary}..."
         output += "---"
 
     return output
