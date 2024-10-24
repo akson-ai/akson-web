@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
+from langchain_ollama.chat_models import ChatOllama
 from langchain_openai import AzureChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
@@ -32,12 +33,14 @@ load_dotenv()
 
 tools = load_tools()
 
-model = AzureChatOpenAI(
+azure_openai = AzureChatOpenAI(
     azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
     azure_deployment=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
     api_version=os.environ["OPENAI_API_VERSION"],
     temperature=0,
 )
+
+ollama = ChatOllama(model="llama3.2", temperature=0)
 
 
 class Subtask(BaseModel):
@@ -81,6 +84,17 @@ def detect_intent(state: AgentState):
         You are intent recognizer.
         You will be given a chat history and user input.
         Recognize the intent of the user input.
+
+        Here are some examples of intents:
+
+        example_user: Hi
+        example_assistant: {"intent": "greeting"}
+
+        example_user: What time is it?
+        example_assistant: {"intent": "question"}
+
+        example_user: Send today's weather forecast to my email
+        example_assistant: {"intent": "task"}
     """
     user_message = """
         # Message History
@@ -99,7 +113,7 @@ def detect_intent(state: AgentState):
         ],
         template_format="jinja2",
     )
-    llm = model.with_structured_output(UserIntent)
+    llm = ollama.with_structured_output(UserIntent)
     chain = prompt | llm
     *history, last_message = state["messages"]
     response = chain.invoke({"history": history, "user_input": last_message})
@@ -137,7 +151,7 @@ def extract_task(state: AgentState):
         ],
         template_format="jinja2",
     )
-    llm = model.with_structured_output(ExtractTask)
+    llm = azure_openai.with_structured_output(ExtractTask)
     chain = prompt | llm
     *history, last_message = state["messages"]
     response = chain.invoke({"history": history, "user_input": last_message})
@@ -170,7 +184,7 @@ def planner(state: AgentState):
             ("human", user_message),
         ]
     )
-    llm = model.with_structured_output(DivideSubtasks)
+    llm = azure_openai.with_structured_output(DivideSubtasks)
     chain = prompt | llm
     response = chain.invoke(
         {
@@ -214,7 +228,7 @@ def executor(state: AgentState):
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_message),
     ]
-    react = create_react_agent(model, tools=[tools[step.tool]])
+    react = create_react_agent(azure_openai, tools=[tools[step.tool]])
     response = react.invoke({"messages": messages})
     reply = response["messages"] = response["messages"][-1].content
     return {
@@ -238,14 +252,14 @@ def decision_maker(state: AgentState):
             SystemMessage(content=system_prompt),
             HumanMessage(content=state["messages"][-1].content),
         ]
-        response = model.invoke(messages)
+        response = azure_openai.invoke(messages)
         perspectives += f"<{name}>\n{response.content}\n</{name}>\n\n"
 
     messages = [
         SystemMessage(content=aggregate_prompt),
         HumanMessage(content=perspectives),
     ]
-    response = model.invoke(messages)
+    response = azure_openai.invoke(messages)
     return {"messages": [response]}
 
 
@@ -260,7 +274,7 @@ def ask_llm(state: AgentState):
             ("placeholder", "{messages}"),
         ]
     )
-    chain = prompt | model
+    chain = prompt | azure_openai
     response = chain.invoke({"messages": state["messages"]})
     return {"messages": [response]}
 
