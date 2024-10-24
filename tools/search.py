@@ -17,11 +17,11 @@ def search_web(query: str):
         summary=True,
     )
 
-    output = ""
-    for result in response.results:
-        output += f"Title: {result.title}"
-        output += f"URL: {result.url}"
-        output += f"Summary: {result.summary}..."
-        output += "---"
-
-    return output
+    return [
+        {
+            "title": result.title,
+            "url": result.url,
+            "summary": result.summary,
+        }
+        for result in response.results
+    ]
