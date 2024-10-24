@@ -250,10 +250,6 @@ def decision_maker(state: AgentState):
 
 
 def ask_llm(state: AgentState):
-    execution_result = state.get("execution_result")
-    if execution_result:
-        return {"messages": [AIMessage(content=execution_result)]}
-
     system_prompt = """
         You are a helpful AI assistant.
         Keep a conversation going with the user.
@@ -278,9 +274,9 @@ def route_task(state: AgentState) -> Literal["extract_task", "decision_maker", "
         return "ask_llm"
 
 
-def execution_finished(state: AgentState) -> Literal["executor", "ask_llm"]:
+def execution_finished(state: AgentState) -> Literal["executor", "__end__"]:
     if state["step"] == len(state["plan"].subtasks):
-        return "ask_llm"
+        return "__end__"
     else:
         return "executor"
 
