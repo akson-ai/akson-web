@@ -1,5 +1,7 @@
 import os
+from typing import Generator
 
+import gradio as gr
 from langchain_core.chat_history import (
     BaseChatMessageHistory,
     InMemoryChatMessageHistory,
@@ -32,10 +34,10 @@ class ChatGPT(Agent):
             self.store[session_id] = InMemoryChatMessageHistory()
         return self.store[session_id]
 
-    def message(self, input: str, *, session_id: str | None) -> str:
+    def message(self, input: str, *, session_id: str | None) -> Generator[str | gr.Image, None, None]:
         config: RunnableConfig = {"configurable": {"session_id": session_id}}
         response = self.chain.invoke([HumanMessage(content=input)], config=config)
-        return response.content
+        yield response.content
 
 
 chatgpt = ChatGPT()
