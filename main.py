@@ -41,7 +41,7 @@ async def get_agents():
             <body>
                 <h1>Agents</h1>
                 <ul>
-                {"".join([f"<li><a href='/agents/{agent}'>{agent}</a></li>" for agent in sorted(agents.keys())])}
+                {"".join([f"<li><a href='/agents/{agent.name}'>{agent.name}</a></li>" for agent in agents.values()])}
                 </ul>
             </body>
         </html>
