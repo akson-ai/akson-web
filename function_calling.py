@@ -1,16 +1,16 @@
 import json
-from typing import Any
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Any
 
-from pydantic import BaseModel
-from openai import pydantic_function_tool, NOT_GIVEN
+from openai import NOT_GIVEN, pydantic_function_tool
+from openai.lib._parsing._completions import parse_chat_completion
 from openai.types.chat import (
     ChatCompletion,
-    ChatCompletionToolParam,
     ChatCompletionToolMessageParam,
+    ChatCompletionToolParam,
 )
-from openai.lib._parsing._completions import parse_chat_completion
+from pydantic import BaseModel
 
 from logger import logger
 
