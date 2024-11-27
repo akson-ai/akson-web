@@ -1,12 +1,47 @@
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
 from agent import SimpleAgent
 from function_calling import Function
 
 
+class TemporalContext(BaseModel):
+    approximate_date: Optional[str]
+    relative_time: Optional[str]
+    life_phase: Optional[str]
+    sequence_marker: Optional[str]
+    certainty: Optional[str]
+
+
 class SaveInfo(Function):
+
+    # Basic Information
+    category: str
+
+    # Temporal Context (all fields optional)
+    temporal_context: Optional[TemporalContext] = None
+
+    # Core Content
+    content: str = Field(..., description="Detailed description of the information")
+    impact_level: int = Field(..., description="Significance or importance from 1 to 5")
+    emotions: List[str] = Field(..., description="Associated emotions")
+    related_people: List[str] = Field(..., description="People involved")
+    location: str = Field(..., description="Where it happened")
+
+    # Context and Metadata
+    learning_outcome: str = Field(..., description="Insights or lessons learned")
+    tags: List[str] = Field(..., description="Keywords for categorization")
+    source: str = Field(..., description="Conversation timestamp when revealed")
+
+    # Optional Fields
+    reflection_notes: Optional[str] = Field(None, description="Additional insights or patterns noticed")
+    follow_up_topics: Optional[List[str]] = Field(None, description="Areas to explore further")
 
     def run(self) -> None:
         print("Saving info...")
-        # TODO: implement saving info
+        with open("life_history.jsonl", "a") as f:
+            f.write(f"{self.model_dump_json()}\n")
 
 
 class Sam(SimpleAgent):
@@ -14,7 +49,7 @@ class Sam(SimpleAgent):
     name = "Sam"
     description = ""
 
-    tools = []
+    tools = [SaveInfo]
 
     prompt = """
         You are a specialized AI assistant focused on personal development, self-reflection,
