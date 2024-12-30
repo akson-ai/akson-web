@@ -273,6 +273,10 @@ class Sam(SimpleAgent):
         with open(self.FILENAME, "r") as f:
             for line in f:
                 message = json.loads(line)
+                if message["role"] not in ["user", "assistant"]:
+                    continue
+                if not message["content"]:
+                    continue
                 self.messages.append(message)
 
 
