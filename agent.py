@@ -31,6 +31,9 @@ class Agent(ABC):
     description: str
     """Description of the agent. It tells what the agent can do. Used during planning."""
 
+    messages: list[ChatCompletionMessageParam] = []
+    """List of messages the agent has sent so far."""
+
     def __repr__(self):
         return f"Agent<{self.name}>"
 

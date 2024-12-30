@@ -1,5 +1,7 @@
-from typing import List, Optional
+import json
+from typing import Generator, List, Optional
 
+import gradio as gr
 from pydantic import BaseModel, Field
 
 from agent import SimpleAgent
@@ -253,5 +255,26 @@ class Sam(SimpleAgent):
         systematic record-keeping of their life story.
     """
 
+    def message(self, input: str, *, session_id: str | None) -> Generator[str | gr.Image, None, None]:
+        yield from super().message(input, session_id=session_id)
+        self.save_history()
+
+    FILENAME = "sam_messages.jsonl"
+
+    def save_history(self):
+        with open(self.FILENAME, "w") as f:
+            for message in self.messages:
+                role, content = message["role"], message["content"]  # type: ignore
+                if role in ["user", "assistant"]:
+                    json.dump({"role": role, "content": content}, f)
+                    f.write("\n")
+
+    def load_history(self):
+        with open(self.FILENAME, "r") as f:
+            for line in f:
+                message = json.loads(line)
+                self.messages.append(message)
+
 
 sam = Sam()
+sam.load_history()
