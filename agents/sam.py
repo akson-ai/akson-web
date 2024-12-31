@@ -9,20 +9,22 @@ from function_calling import Function
 
 
 class TemporalContext(BaseModel):
-    approximate_date: Optional[str]
-    relative_time: Optional[str]
-    life_phase: Optional[str]
-    sequence_marker: Optional[str]
-    certainty: Optional[str]
+    approximate_date: Optional[str] = Field(..., description="examples: Summer 2010, Early 90s, Age 7")
+    relative_time: Optional[str] = Field(..., description="examples: After college, Before moving to New York")
+    life_phase: Optional[str] = Field(..., description="examples: Early childhood, Teens, College years")
+    sequence_marker: Optional[str] = Field(..., description="examples: Before first job, After marriage")
+    certainty: Optional[str] = Field(..., description="examples: certain, approximate, vague")
 
 
 class SaveInfo(Function):
 
     # Basic Information
-    category: str
+    category: str = Field(
+        ..., description="examples: decision, life_event, belief, relationship, achievement, challenge, habit, decision"
+    )
 
     # Temporal Context (all fields optional)
-    temporal_context: Optional[TemporalContext] = None
+    temporal_context: TemporalContext
 
     # Core Content
     content: str = Field(..., description="Detailed description of the information")
@@ -70,39 +72,7 @@ class Sam(SimpleAgent):
 
         # Information Collection Function
 
-        You have access to save_info() with these parameters:
-
-        ```python
-        save_info(
-            # Basic Information
-            category: str, # "life_event","emotion","belief","relationship","achievement","challenge","habit","decision"
-
-            # Temporal Context (all fields optional)
-            temporal_context: {
-                "approximate_date": str,  # e.g., "Summer 2010", "Early 90s", "Age 7"
-                "relative_time": str,     # e.g., "After college", "Before moving to New York"
-                "life_phase": str,        # e.g., "Early childhood", "Teens", "College years"
-                "sequence_marker": str,   # e.g., "Before first job", "After marriage"
-                "certainty": str         # "certain", "approximate", "vague"
-            },
-
-            # Core Content
-            content: str,              # Detailed description of the information
-            impact_level: int,         # 1-5 scale of significance
-            emotions: list[str],       # Associated emotions
-            related_people: list[str], # People involved
-            location: str,             # Where it happened
-
-            # Context and Metadata
-            learning_outcome: str,     # Insights or lessons learned
-            tags: list[str],          # Keywords for categorization
-            source: str,              # Conversation timestamp when revealed
-
-            # Optional Fields
-            reflection_notes: str,     # Additional insights or patterns noticed
-            follow_up_topics: list[str]  # Areas to explore further
-        )
-        ```
+        You have access to SaveInfo() with these parameters:
 
         # Conversation Approach
 
@@ -204,7 +174,7 @@ class Sam(SimpleAgent):
         # Safety and Ethics
 
         1. Maintain appropriate boundaries
-           - You are not a therapist
+           - You are not a therapist but you can provide guidance
            - Refer to professional help when appropriate
            - Stay within the scope of self-reflection and documentation
 
