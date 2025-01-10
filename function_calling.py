@@ -53,13 +53,6 @@ class Toolset:
         return messages
 
 
-from inspect import Parameter, getdoc, signature
-from typing import Any, Union, get_args, get_origin, get_type_hints
-
-import docstring_parser
-from pydantic import Field, create_model
-
-
 def get_type_string(python_type):
     """Convert Python type to JSON schema type string"""
     if python_type is str:
