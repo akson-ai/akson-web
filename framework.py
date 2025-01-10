@@ -14,6 +14,7 @@ from openai.types.chat import (
 )
 from openai.types.chat.chat_completion_message_tool_call_param import Function
 
+from agent import Agent
 from function_calling import Toolset
 from logger import logger
 
@@ -122,6 +123,24 @@ class SimpleAssistant(Assistant):
         functions = [getattr(self, name) for name, func in self.__class__.__dict__.items() if callable(func)]
         print("Functions:", functions)
         super().__init__(prompt, functions)
+
+
+class ConversationalAgent(Agent):
+    name = "MovieGPT"
+    description = "A movie agent that helps users to watch movies online."
+
+    def __init__(self, name: str, description: str, assistant: Assistant):
+        super().__init__()
+        self.name = name
+        self.description = description
+        self.assistant = assistant
+        self.conversation = Conversation()
+
+    def message(self, input: str, *, session_id: str | None):
+        self.conversation.messages.append({"role": "user", "content": input})
+        response = self.assistant.run(self.conversation)
+        self.conversation.messages.append({"role": "assistant", "content": response})
+        yield response
 
 
 if __name__ == "__main__":
