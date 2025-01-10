@@ -21,6 +21,10 @@ langchain-community = "^0.3.0"
 exa-py = "^1.1.8"
 langchain-ollama = "^0.2.0"
 chromadb = "^0.5.23"
+putio-py = "^8.7.0"
+requests = "^2.32.3"
+setuptools = "^75.6.0"
+docstring-parser = "^0.16"
 
 [build-system]
 requires = ["poetry-core"]
