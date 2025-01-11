@@ -45,7 +45,7 @@ class Toolset:
             instance = function.parsed_arguments
             assert isinstance(instance, BaseModel)
             func = self.functions[function.name]
-            kwargs = instance.model_dump()
+            kwargs = {name: getattr(instance, name) for name in instance.model_fields}
             result = func(**kwargs)
             logger.info("%s call result: %s", function.name, result)
             messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": json.dumps(result)})
@@ -67,17 +67,14 @@ def get_type_string(python_type):
         return "array"
     elif python_type is dict or get_origin(python_type) is dict:
         return "object"
-    elif python_type is Any:
-        return "string"  # Default to string for Any
-    return "string"  # Default fallback
+    elif isinstance(python_type, type) and issubclass(python_type, BaseModel):
+        return "object"
+    return "string"
 
 
 def function_to_pydantic_model(func):
-    model_name = func.__name__
-
     sig = signature(func)
     type_hints = get_type_hints(func)
-
     docstring = getdoc(func)
     parsed_docstring = docstring_parser.parse(docstring) if docstring else None
     param_descriptions = {
@@ -104,13 +101,17 @@ def function_to_pydantic_model(func):
         if default is Parameter.empty:
             default = ...
 
-        description = param_descriptions.get(param_name, None)
-
-        # Create Field with explicit type information
-        field = (
+        fields[param_name] = (
             field_type,
-            Field(default=default, description=description, json_schema_extra={"type": get_type_string(field_type)}),
+            Field(
+                default=default,
+                description=param_descriptions.get(param_name, None),
+                json_schema_extra={"type": get_type_string(field_type)},
+            ),
         )
-        fields[param_name] = field
 
-    return create_model(model_name, __doc__=parsed_docstring.short_description if parsed_docstring else None, **fields)
+    return create_model(
+        func.__name__,
+        __doc__=parsed_docstring.short_description if parsed_docstring else None,
+        **fields,
+    )
