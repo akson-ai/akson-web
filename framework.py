@@ -121,7 +121,6 @@ class SimpleAssistant(Assistant):
     def __init__(self):
         prompt = self.__class__.__doc__ or ""
         functions = [getattr(self, name) for name, func in self.__class__.__dict__.items() if callable(func)]
-        print("Functions:", functions)
         super().__init__(prompt, functions)
 
 
