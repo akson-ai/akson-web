@@ -126,8 +126,6 @@ class SimpleAssistant(Assistant):
 
 
 class ConversationalAgent(Agent):
-    name = "MovieGPT"
-    description = "A movie agent that helps users to watch movies online."
 
     def __init__(self, name: str, description: str, assistant: Assistant):
         super().__init__()
