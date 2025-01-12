@@ -20,10 +20,11 @@ class Agent(ABC):
     def __repr__(self):
         return f"Agent<{self.name}>"
 
-    # TODO create a type for return value
+    Return = Generator[str | Image, None, None]
+
     # TODO remove session_id param
     @abstractmethod
-    def message(self, input: str, *, session_id: str | None) -> Generator[str | Image, None, None]:
+    def message(self, input: str, *, session_id: str | None) -> Return:
         """Sends a message to the agent. Agents should remember previous messages."""
 
     def history(self) -> list[MessageDict]:

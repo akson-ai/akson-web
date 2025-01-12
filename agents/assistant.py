@@ -325,7 +325,7 @@ class Assistant(Agent):
     def __init__(self):
         self.graph = create_graph()
 
-    def message(self, input: str, *, session_id: str | None) -> Generator[str | gr.Image, None, None]:
+    def message(self, input: str, *, session_id: str | None) -> Agent.Return:
         png_bytes = self.graph.get_graph().draw_mermaid_png()
         yield gr.Image(Image.open(io.BytesIO(png_bytes)))
 
