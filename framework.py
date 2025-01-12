@@ -41,15 +41,15 @@ class Conversation:
 
 class Assistant:
 
-    def __init__(self, prompt: str, functions: list[Callable] = []):
-        self.prompt = prompt
+    def __init__(self, system_prompt: str, functions: list[Callable] = []):
+        self.system_prompt = system_prompt
         self._client = AzureOpenAI()
         self._toolset = Toolset(self, functions)
 
     def run(self, conversation: Conversation) -> str:
         print(f"Completing chat...\nLast message: {conversation.messages[-1]}")
         messages: Sequence[ChatCompletionMessageParam] = []
-        messages.append(ChatCompletionSystemMessageParam(role="system", content=self.prompt))
+        messages.append(ChatCompletionSystemMessageParam(role="system", content=self.system_prompt))
         messages.extend(conversation.messages)
 
         completion = self._complete(messages)
