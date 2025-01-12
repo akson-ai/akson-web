@@ -22,9 +22,8 @@ class Agent(ABC):
 
     Return = Generator[str | Image, None, None]
 
-    # TODO remove session_id param
     @abstractmethod
-    def message(self, input: str, *, session_id: str | None) -> Return:
+    def message(self, input: str) -> Return:
         """Sends a message to the agent. Agents should remember previous messages."""
 
     def history(self) -> list[MessageDict]:

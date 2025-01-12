@@ -34,7 +34,7 @@ class ChatGPT(Agent):
             self.store[session_id] = InMemoryChatMessageHistory()
         return self.store[session_id]
 
-    def message(self, input: str, *, session_id: str | None) -> Agent.Return:
+    def message(self, input: str) -> Agent.Return:
         config: RunnableConfig = {"configurable": {"session_id": session_id}}
         response = self.chain.invoke([HumanMessage(content=input)], config=config)
         yield response.content

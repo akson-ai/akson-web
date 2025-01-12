@@ -22,7 +22,7 @@ def create(agent: Agent) -> Blocks:
         history.append(user_message)
         yield history
 
-        for reply in agent.message(prompt, session_id="gradio"):
+        for reply in agent.message(prompt):
             assistant_message = {"role": "assistant", "content": reply}
             history.append(assistant_message)
             yield history
