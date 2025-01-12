@@ -2,6 +2,7 @@ import json
 import os
 from typing import Any, Callable, Sequence
 
+from gradio.components.chatbot import MessageDict
 from openai import AzureOpenAI
 from openai.types.chat import (
     ChatCompletion,
@@ -20,18 +21,19 @@ from logger import logger
 
 
 class Conversation:
-    def __init__(self):
+    def __init__(self, name: str):
         self.messages: list[ChatCompletionMessageParam] = []
+        self.filename = f"{name.lower()}_messages.jsonl"
 
-    def save(self, filename: str):
-        with open(filename, "w") as f:
+    def save(self):
+        with open(self.filename, "w") as f:
             for message in self.messages:
                 if message["role"] in ["user", "assistant"]:
                     json.dump(message, f)
                     f.write("\n")
 
-    def load(self, filename: str):
-        with open(filename, "r") as f:
+    def load(self):
+        with open(self.filename, "r") as f:
             for line in f:
                 message = json.loads(line)
                 self.messages.append(message)
@@ -131,13 +133,25 @@ class ConversationalAgent(Agent):
         self.name = name
         self.description = description
         self.assistant = assistant
-        self.conversation = Conversation()
+        self.conversation = Conversation(name)
+        try:
+            self.conversation.load()
+        except FileNotFoundError:
+            pass
 
     def message(self, input: str, *, session_id: str | None):
         self.conversation.messages.append({"role": "user", "content": input})
         response = self.assistant.run(self.conversation)
         self.conversation.messages.append({"role": "assistant", "content": response})
+        self.conversation.save()
         yield response
+
+    def history(self) -> list[MessageDict]:
+        ret = []
+        for message in self.conversation.messages:
+            if message["role"] in ["user", "assistant"]:
+                ret.append({"role": message["role"], "content": message["content"]})  # type: ignore
+        return ret
 
 
 if __name__ == "__main__":
@@ -160,7 +174,7 @@ if __name__ == "__main__":
             """
             return a + b
 
-    conversation = Conversation()
+    conversation = Conversation("test")
     conversation.messages.append({"role": "user", "content": "What is three plus one?"})
 
     mathematician = Mathematician()
