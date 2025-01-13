@@ -14,6 +14,7 @@ from openai.types.chat import (
     ChatCompletionSystemMessageParam,
 )
 from openai.types.chat.chat_completion_message_tool_call_param import Function
+from pydantic import BaseModel
 
 from agent import Agent
 from function_calling import Toolset
@@ -21,8 +22,14 @@ from logger import logger
 
 
 class Conversation:
-    def __init__(self, name: str):
+    def __init__(self):
         self.messages: list[ChatCompletionMessageParam] = []
+
+
+class PersistentConversation(Conversation):
+
+    def __init__(self, name: str):
+        super().__init__()
         self.filename = f"{name.lower()}_messages.jsonl"
 
     def save(self):
@@ -126,6 +133,38 @@ class SimpleAssistant(Assistant):
         super().__init__(prompt, functions)
 
 
+class StructuredOutput:
+
+    def __init__(self, system_prompt: str, response_format: type[BaseModel]):
+        self.system_prompt = system_prompt
+        self.response_format = response_format
+        self._conversation = Conversation()
+        self._client = AzureOpenAI()
+
+    def add_example(self, user_message: str, response: BaseModel):
+        self._conversation.messages.extend(
+            [
+                {"role": "system", "name": "example_user", "content": user_message},
+                {"role": "system", "name": "example_assistant", "content": response.model_dump_json()},
+            ]
+        )
+
+    def run(self, conversation: Conversation) -> object:
+        response = self._client.beta.chat.completions.parse(
+            model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
+            response_format=self.response_format,
+            messages=self._conversation.messages + conversation.messages,
+        )
+        instance = response.choices[0].message.parsed
+        assert isinstance(instance, self.response_format)
+        return instance
+
+    def run_user_message(self, user_message: str) -> object:
+        conversation = Conversation()
+        conversation.messages.append({"role": "user", "content": user_message})
+        return self.run(conversation)
+
+
 class ConversationalAgent(Agent):
 
     def __init__(self, name: str, description: str, assistant: Assistant):
@@ -133,7 +172,7 @@ class ConversationalAgent(Agent):
         self.name = name
         self.description = description
         self.assistant = assistant
-        self.conversation = Conversation(name)
+        self.conversation = PersistentConversation(name)
         try:
             self.conversation.load()
         except FileNotFoundError:
@@ -174,7 +213,7 @@ if __name__ == "__main__":
             """
             return a + b
 
-    conversation = Conversation("test")
+    conversation = Conversation()
     conversation.messages.append({"role": "user", "content": "What is three plus one?"})
 
     mathematician = Mathematician()
