@@ -1,14 +1,12 @@
 import io
 import os
 from datetime import datetime
-from typing import Generator, Literal
+from typing import Literal
 
 import gradio as gr
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableConfig
-from langchain_ollama.chat_models import ChatOllama
 from langchain_openai import AzureChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
@@ -39,8 +37,6 @@ azure_openai = AzureChatOpenAI(
     api_version=os.environ["OPENAI_API_VERSION"],
     temperature=0,
 )
-
-ollama = ChatOllama(model="llama3.2", temperature=0)
 
 
 class Subtask(BaseModel):
@@ -113,7 +109,7 @@ def detect_intent(state: AgentState):
         ],
         template_format="jinja2",
     )
-    llm = ollama.with_structured_output(UserIntent)
+    llm = azure_openai.with_structured_output(UserIntent)
     chain = prompt | llm
     *history, last_message = state["messages"]
     response = chain.invoke({"history": history, "user_input": last_message})
@@ -329,9 +325,8 @@ class Assistant(Agent):
         png_bytes = self.graph.get_graph().draw_mermaid_png()
         yield gr.Image(Image.open(io.BytesIO(png_bytes)))
 
-        config: RunnableConfig = {"configurable": {"thread_id": session_id}}
         state = {"messages": [HumanMessage(content=input)]}
-        for state in self.graph.stream(state, stream_mode="updates", config=config):
+        for state in self.graph.stream(state, stream_mode="updates"):
             for node, values in state.items():
                 print(f"node: {node}, state_update: {values}")
                 if "messages" in values:
