@@ -60,11 +60,11 @@ class Assistant:
         messages.extend(conversation.messages)
 
         completion = self._complete(messages)
-        tool_calls = self._toolset.process_response(completion, agent="TODO")
+        tool_calls = self._toolset.process_response(completion)
         while tool_calls:
             messages.extend(tool_calls)
             completion = self._complete(messages)
-            tool_calls = self._toolset.process_response(completion, agent="TODO")
+            tool_calls = self._toolset.process_response(completion)
 
         content = completion.choices[0].message.content
         assert isinstance(content, str)

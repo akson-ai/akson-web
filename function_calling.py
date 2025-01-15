@@ -26,7 +26,7 @@ class Toolset:
         """Returns the list of tools to be passed into completion reqeust."""
         return [pydantic_function_tool(function_to_pydantic_model(f)) for f in self.functions.values()]
 
-    def process_response(self, completion: ChatCompletion, *, agent: str) -> list[ChatCompletionToolMessageParam]:
+    def process_response(self, completion: ChatCompletion) -> list[ChatCompletionToolMessageParam]:
         """This is called each time a response is received from completion method."""
         completion = parse_chat_completion(
             chat_completion=completion, input_tools=self.openai_schema(), response_format=NOT_GIVEN
@@ -41,7 +41,7 @@ class Toolset:
         messages = []
         for tool_call in tool_calls:
             function = tool_call.function
-            logger.info("%s calls tool: %s(%s)", agent, function.name, function.parsed_arguments)
+            logger.info("Tool call: %s(%s)", function.name, function.parsed_arguments)
             instance = function.parsed_arguments
             assert isinstance(instance, BaseModel)
             func = self.functions[function.name]
