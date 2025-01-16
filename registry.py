@@ -2,7 +2,7 @@
 Global registry for agents.
 """
 
-from agent import Agent
+from framework import Agent
 
 # Global dictionary of registered agents.
 agents: dict[str, Agent] = {}

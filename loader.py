@@ -4,7 +4,7 @@ from typing import TypeVar
 
 from langchain_core.tools.structured import StructuredTool
 
-from agent import Agent
+from framework import Agent
 from logger import logger
 
 

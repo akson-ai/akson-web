@@ -4,7 +4,7 @@ from gradio.blocks import Blocks
 from gradio.components import Chatbot, Markdown, Textbox
 from gradio.components.chatbot import Message, MessageDict
 
-from agent import Agent
+from framework import Agent
 
 
 def get_previous_messages(agent: Agent) -> list[Message | MessageDict]:
