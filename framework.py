@@ -73,7 +73,13 @@ class PersistentConversation(Conversation):
                 self.messages.append(message)
 
 
-class Assistant:
+class Assistant(ABC):
+
+    @abstractmethod
+    def run(self, conversation: Conversation) -> str: ...
+
+
+class SimpleAssistant(Assistant):
 
     def __init__(self, system_prompt: str, functions: list[Callable] = []):
         self.system_prompt = system_prompt
@@ -140,7 +146,7 @@ def _convert_tool_call(tool_call: ChatCompletionMessageToolCall) -> ChatCompleti
     )
 
 
-class SimpleAssistant(Assistant):
+class DeclarativeAssistant(SimpleAssistant):
     """
     Declarative way to create an assistant.
     Class docstring is used as the prompt; methods are used as functions.
@@ -222,7 +228,7 @@ class ConversationalAgent(Agent):
 
 if __name__ == "__main__":
 
-    class Mathematician(SimpleAssistant):
+    class Mathematician(DeclarativeAssistant):
         """
         You are a mathematician. You are good at math. You can answer questions about math.
         """
