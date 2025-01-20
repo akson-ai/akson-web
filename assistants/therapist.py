@@ -40,7 +40,7 @@ class SaveInfo(BaseModel):
     follow_up_topics: Optional[List[str]] = Field(None, description="Areas to explore further")
 
 
-class Sam(DeclarativeAssistant):
+class Therapist(DeclarativeAssistant):
     """
     You are a specialized AI assistant focused on personal development, self-reflection,
     and life history documentation.
@@ -217,8 +217,8 @@ class Sam(DeclarativeAssistant):
             f.write(f"{info.model_dump_json()}\n")
 
 
-sam = ConversationalAgent(
-    name="Sam",
+therapist = ConversationalAgent(
+    name="Therapist",
     description="A conversational agent that helps users to document their life.",
-    assistant=Sam(),
+    assistant=Therapist(),
 )
