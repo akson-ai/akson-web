@@ -49,11 +49,14 @@ class Agent(ABC):
 
 
 class Conversation:
+    """Converation is used to store messages between the user and the agent."""
+
     def __init__(self):
         self.messages: list[ChatCompletionMessageParam] = []
 
 
 class PersistentConversation(Conversation):
+    """Conversation that can be saved and loaded from a file."""
 
     def __init__(self, name: str):
         super().__init__()
@@ -74,12 +77,14 @@ class PersistentConversation(Conversation):
 
 
 class Assistant(ABC):
+    """Assistants are used to generate responses to conversations."""
 
     @abstractmethod
     def run(self, conversation: Conversation) -> str: ...
 
 
 class SimpleAssistant(Assistant):
+    """Simple assistant that uses OpenAI's chat API to generate responses."""
 
     def __init__(self, system_prompt: str, functions: list[Callable] = []):
         self.system_prompt = system_prompt
@@ -161,12 +166,13 @@ class DeclarativeAssistant(SimpleAssistant):
     """
 
     def __init__(self):
-        prompt = self.__class__.__doc__ or ""
+        prompt = self.__doc__ or ""
         functions = [getattr(self, name) for name, func in self.__class__.__dict__.items() if callable(func)]
         super().__init__(prompt, functions)
 
 
 class StructuredOutput:
+    """Get structured output from a chat model."""
 
     def __init__(self, system_prompt: str, response_format: type[BaseModel]):
         self.system_prompt = system_prompt
@@ -175,6 +181,7 @@ class StructuredOutput:
         self._client = AzureOpenAI()
 
     def add_example(self, user_message: str, response: BaseModel):
+        """Add an example to the prompt."""
         self._conversation.messages.extend(
             [
                 {"role": "system", "name": "example_user", "content": user_message},
@@ -183,6 +190,7 @@ class StructuredOutput:
         )
 
     def run(self, conversation: Conversation) -> object:
+        """Run the system prompt on conversation and return the parsed response."""
         response = self._client.beta.chat.completions.parse(
             model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
             response_format=self.response_format,
@@ -193,6 +201,7 @@ class StructuredOutput:
         return instance
 
     def run_user_message(self, user_message: str) -> object:
+        """Run the system prompt on a user message and return the parsed response."""
         conversation = Conversation()
         conversation.messages.append({"role": "user", "content": user_message})
         return self.run(conversation)
