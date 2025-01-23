@@ -220,7 +220,7 @@ class ConversationalAgent(Agent):
         except FileNotFoundError:
             pass
 
-    def message(self, input: str):
+    def message(self, input: str) -> Agent.Return:
         self.conversation.messages.append({"role": "user", "content": input})
         response = self.assistant.run(self.conversation)
         self.conversation.messages.append({"role": "assistant", "content": response})

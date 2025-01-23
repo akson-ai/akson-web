@@ -1,11 +1,11 @@
 from dotenv import load_dotenv
 
+load_dotenv()
+
 from agents.interviewer import company_name
 from agents.interviewer import interviewer as agent
 from agents.interviewer import job_description, job_title
 from framework import ConversationalAgent, DeclarativeAssistant
-
-load_dotenv()
 
 # {{{ input
 resume = """
@@ -123,7 +123,8 @@ while not user.assistant.finished:  # type: ignore
     agent_message = next(agent.message(user_message))
     assert isinstance(agent_message, str)
     print(f"Agent: {agent_message}")
+    print("-" * 80)
     user_message = next(user.message(agent_message))
     assert isinstance(user_message, str)
     print(f"User: {user_message}")
-    print("-" * 40)
+    print("-" * 80)

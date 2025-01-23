@@ -1,4 +1,4 @@
-from framework import Agent, Conversation, SimpleAssistant
+from framework import Agent, ConversationalAgent, SimpleAssistant
 
 # {{{ input
 company_name = """ACME Works, Inc."""
@@ -239,15 +239,17 @@ Maintain a professional and positive tone while being clear about expectations a
 # }}}
 
 
-class Interviewer(Agent):
+class Interviewer(ConversationalAgent):
 
     def __init__(self, company_name, job_title, job_description):
+        super().__init__(
+            name="Interviewer",
+            description=f"AI interviewer for {job_title} at {company_name}",
+            assistant=SimpleAssistant("You are an AI interviewer"),
+        )
         self.company_name = company_name
         self.job_title = job_title
         self.job_description = job_description
-
-        self.name = "Interviewer"
-        self.description = f"AI interviewer for {job_title} at {company_name}"
 
         self.phases = [
             introduction,
@@ -260,9 +262,12 @@ class Interviewer(Agent):
             closing,
         ]
         self.current_phase = 0
-        self.conversation = Conversation()
 
     def message(self, input: str) -> Agent.Return:
+        self.set_assistant()
+        yield from super().message(input)
+
+    def set_assistant(self):
         system_prompt = f"""
         You are an AI interviewer for {self.job_title} at {self.company_name}.
 
@@ -291,11 +296,7 @@ class Interviewer(Agent):
             print(f"Completed {self.phases[self.current_phase].name} phase.")
             self.current_phase += 1
 
-        assistant = SimpleAssistant(system_prompt, [mark_completed])
-        self.conversation.messages.append({"role": "user", "content": input})
-        response = assistant.run(self.conversation)
-        self.conversation.messages.append({"role": "assistant", "content": response})
-        yield response
+        self.assistant = SimpleAssistant(system_prompt, [mark_completed])
 
 
 interviewer = Interviewer(company_name, job_title, job_description)
