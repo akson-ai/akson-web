@@ -6,26 +6,77 @@
     <title>Simple Chatbot</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5.0.0-beta.7/daisyui.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <style type="text/css">
-      // * { border: 1px solid red }
-    </style>
   </head>
   <body>
     <div class="flex flex-col max-w-prose mx-auto h-screen">
-      <div>
-        <div class="chat chat-start">
-          <div class="chat-bubble"> It's over Anakin, <br /> I have the high ground. </div>
-        </div>
-        <div class="chat chat-end">
-          <div class="chat-bubble">You underestimate my power!</div>
-        </div>
-      </div>
-
-      <div class="flex mt-auto justify-center items-center space-x-2">
-        <input type="text" placeholder="Type here" class="input input-bordered w-full max-w-xs" />
-        <button class="btn">&uarr;</button>
+      <div id="chatHistory" class="p-4 overflow-y-auto"></div>
+      <div class="flex mt-auto justify-center items-center space-x-2 p-4">
+        <input id="input" type="text" placeholder="Type here" class="input input-bordered w-full max-w-xs" />
+        <button id="send" class="btn">&uarr;</button>
       </div>
     </div>
   </body>
-  <script src="main.js"></script>
+  <script type="text/javascript">
+    chatHistory = document.getElementById('chatHistory');
+    input = document.getElementById('input');
+    send = document.getElementById('send');
+    function addMessage(sender, text) {
+      const chatDiv = document.createElement('div');
+      chatDiv.classList.add('chat');
+      if (sender === 'user') {
+        chatDiv.classList.add('chat-start');
+      } else if (sender === 'assistant') {
+        chatDiv.classList.add('chat-end');
+      }
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('chat-bubble');
+      messageDiv.textContent = text;
+      chatDiv.appendChild(messageDiv);
+      chatHistory.appendChild(chatDiv);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+    function sendMessage() {
+      if (!input.value) return;
+      const message = input.value;
+      addMessage('user', message);
+      input.value = '';
+
+      // Send message to server
+      fetch('/message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: message }),
+      });
+    }
+    send.addEventListener('click', sendMessage);
+    input.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    // Create a new EventSource object
+    const eventSource = new EventSource('/events');
+
+    // Listen for incoming messages
+    eventSource.onmessage = function(event) {
+      console.log('Received message:', event.data);
+      const data = JSON.parse(event.data);
+
+      // Add each message uniquely
+      addMessage('assistant', data.message);
+    };
+
+    fetch('/history').then((res) => {
+      res.json().then((history) => {
+        history.forEach((message) => {
+          addMessage(message.role, message.content);
+        });
+      });
+    });
+
+    input.focus();
+  </script>
 </html>

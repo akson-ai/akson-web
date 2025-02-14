@@ -1,14 +1,20 @@
+import asyncio
+import json
 from textwrap import dedent
+from typing import AsyncGenerator
 
 import gradio as gr
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from sse_starlette.event import ServerSentEvent
+from sse_starlette.sse import EventSourceResponse
 
 import chat_interface
 import openai_compat
 import registry
 from loader import load_agents
+from logger import logger
 
 load_dotenv()
 
@@ -52,3 +58,37 @@ async def get_agents():
 @app.get("/style.css")
 async def styles():
     return FileResponse("style.css")
+
+
+@app.get("/chat")
+async def chat_app():
+    return FileResponse("web/index.html")
+
+
+message_queue = asyncio.Queue()
+agent = agents["chatgpt"]
+
+
+@app.get("/history")
+async def get_history():
+    return agent.history()
+
+
+@app.post("/message")
+async def handle_message(request: Request):
+    data = await request.json()
+    message = data.get("message")
+    logger.info(f"Received message: {message}")
+    response = agent.message(message)
+    for message in response:
+        await message_queue.put({"message": message})
+
+
+@app.get("/events")
+async def stream_events():
+    async def generate_events() -> AsyncGenerator[ServerSentEvent, None]:
+        while True:
+            message = await message_queue.get()
+            yield ServerSentEvent(json.dumps(message))
+
+    return EventSourceResponse(generate_events())

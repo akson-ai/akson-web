@@ -54,6 +54,9 @@ class Conversation:
     def __init__(self):
         self.messages: list[ChatCompletionMessageParam] = []
 
+    def clear(self):
+        self.messages = []
+
 
 class PersistentConversation(Conversation):
     """Conversation that can be saved and loaded from a file."""
@@ -221,9 +224,13 @@ class ConversationalAgent(Agent):
             pass
 
     def message(self, input: str) -> Agent.Return:
-        self.conversation.messages.append({"role": "user", "content": input})
-        response = self.assistant.run(self.conversation)
-        self.conversation.messages.append({"role": "assistant", "content": response})
+        if input.strip() == "/clear":
+            self.conversation.clear()
+            response = "Conversation cleared"
+        else:
+            self.conversation.messages.append({"role": "user", "content": input})
+            response = self.assistant.run(self.conversation)
+            self.conversation.messages.append({"role": "assistant", "content": response})
         self.conversation.save()
         yield response
 
