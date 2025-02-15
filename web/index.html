@@ -11,6 +11,11 @@
     <div class="flex flex-col max-w-prose mx-auto h-screen">
       <div id="chatHistory" class="p-4 overflow-y-auto"></div>
       <div class="flex mt-auto justify-center items-center space-x-2 p-4">
+        <select id="assistant" class="select select-bordered w-full max-w-xs">
+          <option disabled selected>Choose an assistant...</option>
+        </select>
+      </div>
+      <div class="flex mt-2 justify-center items-center space-x-2 p-4">
         <input id="input" type="text" placeholder="Type here" class="input input-bordered w-full max-w-xs" />
         <button id="send" class="btn">&uarr;</button>
       </div>
@@ -73,6 +78,18 @@
       res.json().then((history) => {
         history.forEach((message) => {
           addMessage(message.role, message.content);
+        });
+      });
+    });
+
+    fetch('/assistants').then((res) => {
+      res.json().then((assistants) => {
+        const select = document.getElementById('assistant');
+        assistants.forEach((assistant) => {
+          const option = document.createElement('option');
+          option.value = assistant.id;
+          option.textContent = assistant.name;
+          select.appendChild(option);
         });
       });
     });
