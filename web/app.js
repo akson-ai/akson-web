@@ -59,7 +59,10 @@ function ChatApp() {
     fetch('/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: inputText }),
+      body: JSON.stringify({ 
+        message: inputText,
+        assistant: selectedAssistant,
+      }),
     });
 
     setInputText('');
