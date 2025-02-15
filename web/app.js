@@ -30,7 +30,7 @@ function ChatApp() {
       .then((data) => {
         setAssistants(data);
         if (data.length > 0) {
-          setSelectedAssistant(data[0].id);
+          setSelectedAssistant(data[0].name);
         }
       });
 
@@ -59,7 +59,7 @@ function ChatApp() {
     fetch('/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         message: inputText,
         assistant: selectedAssistant,
       }),
@@ -83,7 +83,7 @@ function ChatApp() {
           onChange={(e) => setSelectedAssistant(e.target.value)}
         >
           {assistants.map(assistant => (
-            <option key={assistant.id} value={assistant.id}>
+            <option key={assistant.name} value={assistant.name}>
               {assistant.name}
             </option>
           ))}
