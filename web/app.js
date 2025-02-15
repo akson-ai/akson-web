@@ -10,6 +10,7 @@ function ChatApp() {
   const [messages, setMessages] = React.useState([]);
   const [inputText, setInputText] = React.useState('');
   const [assistants, setAssistants] = React.useState([]);
+  const [selectedAssistant, setSelectedAssistant] = React.useState('');
   const chatHistoryRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -26,7 +27,12 @@ function ChatApp() {
     // Load assistants
     fetch('/assistants')
       .then((res) => res.json())
-      .then(setAssistants);
+      .then((data) => {
+        setAssistants(data);
+        if (data.length > 0) {
+          setSelectedAssistant(data[0].id);
+        }
+      });
 
     // Set up SSE listener
     const eventSource = new EventSource('/events');
@@ -68,7 +74,11 @@ function ChatApp() {
       </div>
       <div className="flex mt-auto justify-center items-center space-x-2 p-4">
         <span className="text-sm font-medium">Assistant:</span>
-        <select className="select select-bordered w-full max-w-xs">
+        <select 
+          className="select select-bordered w-full max-w-xs"
+          value={selectedAssistant}
+          onChange={(e) => setSelectedAssistant(e.target.value)}
+        >
           {assistants.map(assistant => (
             <option key={assistant.id} value={assistant.id}>
               {assistant.name}
