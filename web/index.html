@@ -1,99 +1,17 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Simple Chatbot</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5.0.0-beta.7/daisyui.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  </head>
-  <body>
-    <div class="flex flex-col max-w-prose mx-auto h-screen">
-      <div id="chatHistory" class="p-4 overflow-y-auto"></div>
-      <div class="flex mt-auto justify-center items-center space-x-2 p-4">
-        <select id="assistant" class="select select-bordered w-full max-w-xs">
-          <option disabled selected>Choose an assistant...</option>
-        </select>
-      </div>
-      <div class="flex mt-2 justify-center items-center space-x-2 p-4">
-        <input id="input" type="text" placeholder="Type here" class="input input-bordered w-full max-w-xs" />
-        <button id="send" class="btn">&uarr;</button>
-      </div>
-    </div>
-  </body>
-  <script type="text/javascript">
-    chatHistory = document.getElementById('chatHistory');
-    input = document.getElementById('input');
-    send = document.getElementById('send');
-    function addMessage(sender, text) {
-      const chatDiv = document.createElement('div');
-      chatDiv.classList.add('chat');
-      if (sender === 'user') {
-        chatDiv.classList.add('chat-start');
-      } else if (sender === 'assistant') {
-        chatDiv.classList.add('chat-end');
-      }
-      const messageDiv = document.createElement('div');
-      messageDiv.classList.add('chat-bubble');
-      messageDiv.textContent = text;
-      chatDiv.appendChild(messageDiv);
-      chatHistory.appendChild(chatDiv);
-      chatHistory.scrollTop = chatHistory.scrollHeight;
-    }
-    function sendMessage() {
-      if (!input.value) return;
-      const message = input.value;
-      addMessage('user', message);
-      input.value = '';
-
-      // Send message to server
-      fetch('/message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: message }),
-      });
-    }
-    send.addEventListener('click', sendMessage);
-    input.addEventListener('keypress', (event) => {
-      if (event.key === 'Enter') {
-        sendMessage();
-      }
-    });
-
-    // Create a new EventSource object
-    const eventSource = new EventSource('/events');
-
-    // Listen for incoming messages
-    eventSource.onmessage = function(event) {
-      console.log('Received message:', event.data);
-      const data = JSON.parse(event.data);
-
-      // Add each message uniquely
-      addMessage('assistant', data.message);
-    };
-
-    fetch('/history').then((res) => {
-      res.json().then((history) => {
-        history.forEach((message) => {
-          addMessage(message.role, message.content);
-        });
-      });
-    });
-
-    fetch('/assistants').then((res) => {
-      res.json().then((assistants) => {
-        const select = document.getElementById('assistant');
-        assistants.forEach((assistant) => {
-          const option = document.createElement('option');
-          option.value = assistant.id;
-          option.textContent = assistant.name;
-          select.appendChild(option);
-        });
-      });
-    });
-
-    input.focus();
-  </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="app.js" type="text/babel"></script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
 </html>

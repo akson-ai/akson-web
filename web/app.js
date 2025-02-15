@@ -1,108 +1,97 @@
-function Counter() {
-    const [count, setCount] = React.useState(0);
-
-    return (
-	<div style={{
-	    padding: '20px',
-	    maxWidth: '300px',
-	    margin: '20px auto',
-	    border: '1px solid #ddd',
-	    borderRadius: '8px',
-	    textAlign: 'center'
-	}}>
-	    <h2>Counter: {count}</h2>
-	    <button
-		onClick={() => setCount(count + 1)}
-		style={{
-		    padding: '8px 16px',
-		    backgroundColor: '#0070f3',
-		    color: 'white',
-		    border: 'none',
-		    borderRadius: '4px',
-		    cursor: 'pointer'
-		}}
-	    >
-		Increment
-	    </button>
-	</div>
-    );
+function ChatMessage({ sender, text }) {
+  return (
+    <div className={`chat ${sender === 'user' ? 'chat-start' : 'chat-end'}`}>
+      <div className="chat-bubble">{text}</div>
+    </div>
+  );
 }
 
+function ChatApp() {
+  const [messages, setMessages] = React.useState([]);
+  const [inputText, setInputText] = React.useState('');
+  const [assistants, setAssistants] = React.useState([]);
+  const chatHistoryRef = React.useRef(null);
 
-chatHistory = document.getElementById('chatHistory');
-input = document.getElementById('input');
-send = document.getElementById('send');
-function addMessage(sender, text) {
-  const chatDiv = document.createElement('div');
-  chatDiv.classList.add('chat');
-  if (sender === 'user') {
-    chatDiv.classList.add('chat-start');
-  } else if (sender === 'assistant') {
-    chatDiv.classList.add('chat-end');
-  }
-  const messageDiv = document.createElement('div');
-  messageDiv.classList.add('chat-bubble');
-  messageDiv.textContent = text;
-  chatDiv.appendChild(messageDiv);
-  chatHistory.appendChild(chatDiv);
-  chatHistory.scrollTop = chatHistory.scrollHeight;
-}
-function sendMessage() {
-  if (!input.value) return;
-  const message = input.value;
-  addMessage('user', message);
-  input.value = '';
+  React.useEffect(() => {
+    // Load chat history
+    fetch('/history')
+      .then((res) => res.json())
+      .then((history) => {
+        setMessages(history.map(msg => ({
+          sender: msg.role,
+          text: msg.content
+        })));
+      });
 
-  // Send message to server
-  fetch('/message', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ message: message }),
-  });
-}
-send.addEventListener('click', sendMessage);
-input.addEventListener('keypress', (event) => {
-  if (event.key === 'Enter') {
-    sendMessage();
-  }
-});
+    // Load assistants
+    fetch('/assistants')
+      .then((res) => res.json())
+      .then(setAssistants);
 
-// Create a new EventSource object
-const eventSource = new EventSource('/events');
+    // Set up SSE listener
+    const eventSource = new EventSource('/events');
+    eventSource.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      setMessages(prev => [...prev, { sender: 'assistant', text: data.message }]);
+    };
 
-// Listen for incoming messages
-eventSource.onmessage = function(event) {
-  console.log('Received message:', event.data);
-  const data = JSON.parse(event.data);
+    return () => eventSource.close();
+  }, []);
 
-  // Add each message uniquely
-  addMessage('assistant', data.message);
-};
+  React.useEffect(() => {
+    // Scroll to bottom when messages change
+    if (chatHistoryRef.current) {
+      chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-fetch('/history').then((res) => {
-  res.json().then((history) => {
-    history.forEach((message) => {
-      addMessage(message.role, message.content);
+  const sendMessage = () => {
+    if (!inputText.trim()) return;
+
+    setMessages(prev => [...prev, { sender: 'user', text: inputText }]);
+
+    fetch('/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: inputText }),
     });
-  });
-});
 
-fetch('/assistants').then((res) => {
-  res.json().then((assistants) => {
-    const select = document.getElementById('assistant');
-    assistants.forEach((assistant) => {
-      const option = document.createElement('option');
-      option.value = assistant.id;
-      option.textContent = assistant.name;
-      select.appendChild(option);
-    });
-  });
-});
+    setInputText('');
+  };
 
-input.focus();
+  return (
+    <div className="flex flex-col max-w-prose mx-auto h-screen">
+      <div id="chatHistory" className="p-4 overflow-y-auto" ref={chatHistoryRef}>
+        {messages.map((msg, index) => (
+          <ChatMessage key={index} sender={msg.sender} text={msg.text} />
+        ))}
+      </div>
+      <div className="flex mt-auto justify-center items-center space-x-2 p-4">
+        <select className="select select-bordered w-full max-w-xs">
+          <option disabled selected>Choose an assistant...</option>
+          {assistants.map(assistant => (
+            <option key={assistant.id} value={assistant.id}>
+              {assistant.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex mt-2 justify-center items-center space-x-2 p-4">
+        <input
+          type="text"
+          placeholder="Type here"
+          className="input input-bordered w-full max-w-xs"
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          autoFocus
+        />
+        <button className="btn" onClick={sendMessage}>&uarr;</button>
+      </div>
+    </div>
+  );
+}
 
 // Render your app
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<Counter />);
+root.render(<ChatApp />);

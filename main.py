@@ -65,6 +65,11 @@ async def chat_app():
     return FileResponse("web/index.html")
 
 
+@app.get("/app.js")
+async def chat_app_js():
+    return FileResponse("web/app.js")
+
+
 message_queue = asyncio.Queue()
 agent = agents["chatgpt"]
 
@@ -92,3 +97,24 @@ async def stream_events():
             yield ServerSentEvent(json.dumps(message))
 
     return EventSourceResponse(generate_events())
+
+
+@app.get("/assistants")
+async def get_assistants():
+    return list({"id": agent.name, "name": agent.name} for agent in agents.values())
+
+
+# # about history
+# session_id = "<previous session id>"
+# client = Session(session_id)
+# client.get_messages()
+
+# # available assistants
+# assistants = client.get_assistants()
+# assistant = assistants[0]
+# client.set_assistant(assistant)
+
+# # messaging
+# client.send_message()
+# for reply in client.get_replies():
+#     print(reply)
