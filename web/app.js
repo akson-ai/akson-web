@@ -67,8 +67,8 @@ function ChatApp() {
         ))}
       </div>
       <div className="flex mt-auto justify-center items-center space-x-2 p-4">
+        <span className="text-sm font-medium">Assistant:</span>
         <select className="select select-bordered w-full max-w-xs">
-          <option disabled selected>Choose an assistant...</option>
           {assistants.map(assistant => (
             <option key={assistant.id} value={assistant.id}>
               {assistant.name}
