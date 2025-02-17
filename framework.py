@@ -1,7 +1,7 @@
 import json
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generator, Sequence
+from typing import Any, Callable, Iterator, Sequence
 
 from gradio.components import Image
 from gradio.components.chatbot import MessageDict
@@ -37,7 +37,7 @@ class Agent(ABC):
     def __repr__(self):
         return f"Agent<{self.name}>"
 
-    Return = Generator[str | Image, None, None]
+    Return = Iterator[str | Image]
 
     @abstractmethod
     def message(self, input: str) -> Return:
