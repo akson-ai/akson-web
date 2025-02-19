@@ -39,7 +39,7 @@ function ChatApp() {
       });
 
     // Set up SSE listener
-    const eventSource = new EventSource('/events');
+    const eventSource = new EventSource(`/events/${chatId}`);
     eventSource.onmessage = function(event) {
       const data = JSON.parse(event.data);
       console.log(data)
