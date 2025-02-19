@@ -2,10 +2,9 @@ import json
 import uuid
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Request
+from fastapi import Body, Depends, FastAPI, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 from sse_starlette.event import ServerSentEvent
 from sse_starlette.sse import EventSourceResponse
 
@@ -72,34 +71,30 @@ async def get_history(chat: PersistentChat = Depends(get_chat)):
     return history
 
 
-class ClientMessage(BaseModel):
-    content: str
-    assistant: str
-    chat_id: str
+def get_assistant(name: str = Body(alias="assistant")) -> Assistant:
+    return assistants[name]
 
 
-@app.post("/message")
-async def handle_message(params: ClientMessage, request: Request):
+@app.post("/message/{chat_id}")
+async def handle_message(
+    request: Request,
+    content: str = Body(...),
+    assistant: Assistant = Depends(get_assistant),
+    chat: PersistentChat = Depends(get_chat),
+):
     """Handle a message from the client."""
-    logger.info("Received message: %s", params)
-
-    chat = get_chat(params.chat_id)
-
-    if params.content.strip() == "/clear":
+    if content.strip() == "/clear":
         chat.messages.clear()
         chat.save()
         logger.info("Chat cleared")
         await chat._send_control("clear")
         return
 
-    chat.messages.append({"role": "user", "content": params.content})
-
-    selected_assistant = assistants[params.assistant]
-    assert isinstance(selected_assistant, Assistant)
+    chat.messages.append({"role": "user", "content": content})
 
     chat._request = request
     try:
-        await selected_assistant.run(chat)
+        await assistant.run(chat)
     finally:
         chat._request = None
         chat.save()

@@ -91,13 +91,12 @@ function ChatApp() {
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
 
-    fetch('/message', {
+    fetch(`/message/${chatId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         content: inputText,
         assistant: selectedAssistant,
-        chat_id: chatId,
       }),
       signal: abortControllerRef.current.signal,
     }).catch(err => {
