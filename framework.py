@@ -4,6 +4,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Iterator, Literal, Sequence, TypedDict
 
+from fastapi import Request
 from openai import AzureOpenAI, Stream
 from openai.types.chat import (
     ChatCompletion,
@@ -54,17 +55,43 @@ class Chat:
     """Chat stores messages between the user and the agent."""
 
     def __init__(self):
-        self.messages: list[Message] = []
-        self.queue = asyncio.Queue()
+        self.messages: list[Message] = []  # TODO encapsulate messages
+        self._request: Request | None
+        self._queue = asyncio.Queue()
+
+    async def add_message(self, message: str | Iterator[str]):
+        print(f"Adding message: {message}")
+        await self._queue.put({"control": "new_message"})
+
+        if isinstance(message, str):
+            stream = [message]
+        else:
+            stream = message
+
+        chunks = []
+        for chunk in stream:
+            chunks.append(chunk)
+            print(f"Putting queue: {chunk}")
+            await self._queue.put({"chunk": chunk})
+
+            assert isinstance(self._request, Request)
+            if await self._request.is_disconnected():
+                logger.info("Client disconnected, stopping streaming")
+                break
+
+        self.messages.append({"role": "assistant", "content": "".join(chunks)})
+
+    async def _send_control(self, code: str):
+        await self._queue.put({"control": code})
 
 
 class PersistentChat(Chat):
     """Chat that can be saved and loaded from a file."""
 
-    def __init__(self, name: str):
+    def __init__(self, id: str):
         super().__init__()
         # TODO save in a dir
-        self.filename = f"{name.lower()}_messages.jsonl"
+        self.filename = f"chat_{id}_messages.jsonl"
 
     def save(self):
         with open(self.filename, "w") as f:
@@ -87,7 +114,7 @@ class Assistant(ABC):
     #     return f"Assistant<{self.name}>"
 
     @abstractmethod
-    def run(self, chat: Chat) -> Iterator[str]: ...
+    async def run(self, chat: Chat) -> None: ...
 
 
 class SimpleAssistant(Assistant):
@@ -98,7 +125,7 @@ class SimpleAssistant(Assistant):
         self._client = AzureOpenAI()
         self._toolset = Toolset(self, functions)
 
-    def run(self, chat: Chat) -> Iterator[str]:
+    async def run(self, chat: Chat) -> None:
         logger.debug(f"Completing chat...\nLast message: {chat.messages[-1]}")
 
         messages: Sequence[ChatCompletionMessageParam] = []
@@ -116,15 +143,14 @@ class SimpleAssistant(Assistant):
         #     completion = self._complete(messages)
         #     tool_calls = self._toolset.process_response(completion)
 
-        for chunk in completion:
-            content = chunk.choices[0].delta.content
-            if content:
-                print(f"Yielding: {content}")
-                yield content
+        def real_message() -> Iterator[str]:
+            for chunk in completion:
+                content = chunk.choices[0].delta.content
+                if content:
+                    print(f"Yielding: {content}")
+                    yield content
 
-        # content = completion.choices[0].message.content
-        # assert isinstance(content, str)
-        # return content
+        await chat.add_message(real_message())
 
     def _complete(self, messages: list[ChatCompletionMessageParam]) -> Stream[ChatCompletionChunk]:
         logger.info("Completing chat")

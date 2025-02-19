@@ -47,6 +47,9 @@ function ChatApp() {
       if (data.control === 'new_message') {
         // Create a new empty message when receiving control event
         setMessages(prev => [...prev, { sender: 'assistant', text: '' }]);
+      } else if (data.control === 'clear') {
+        // Create a new empty message when receiving control event
+        setMessages([]);
       } else if (data.chunk) {
         // Append chunk to the last message
         setMessages(prev => {
