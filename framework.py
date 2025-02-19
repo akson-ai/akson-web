@@ -1,19 +1,20 @@
+import asyncio
 import json
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Iterator, Sequence
+from typing import Any, Callable, Iterator, Literal, Sequence, TypedDict
 
-from gradio.components import Image
-from gradio.components.chatbot import MessageDict
-from openai import AzureOpenAI
+from openai import AzureOpenAI, Stream
 from openai.types.chat import (
     ChatCompletion,
     ChatCompletionAssistantMessageParam,
+    ChatCompletionChunk,
     ChatCompletionMessage,
     ChatCompletionMessageParam,
     ChatCompletionMessageToolCall,
     ChatCompletionMessageToolCallParam,
     ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
 )
 from openai.types.chat.chat_completion_message_tool_call_param import Function
 from pydantic import BaseModel
@@ -21,56 +22,55 @@ from pydantic import BaseModel
 from function_calling import Toolset
 from logger import logger
 
+# class Agent(ABC):
+#     """Base class for agents."""
 
-class Agent(ABC):
-    """Base class for agents."""
+#     name: str
+#     """Name of the agent. Must be unique.
+#     Other agents use this name to refer to it.
+#     It is also displayed in the list of agents."""
 
-    name: str
-    """Name of the agent. Must be unique.
-    Other agents use this name to refer to it.
-    It is also displayed in the list of agents."""
+#     description: str
+#     """Description of the agent.
+#     It tells what the agent can do. Used during planning."""
 
-    description: str
-    """Description of the agent.
-    It tells what the agent can do. Used during planning."""
+#     def __repr__(self):
+#         return f"Agent<{self.name}>"
 
-    def __repr__(self):
-        return f"Agent<{self.name}>"
+#     Reply = str | Iterator[str] | Image
+#     Return = Iterator[Reply]
 
-    Return = Iterator[str | Image]
-
-    @abstractmethod
-    def message(self, input: str) -> Return:
-        """Sends a message to the agent. Agents should remember previous messages."""
-
-    def history(self) -> list[MessageDict]:
-        """Optional. Agent implementation should return a list of previous messages."""
-        return []
+#     @abstractmethod
+#     def message(self, input: str) -> Return:
+#         """Sends a message to the agent. Agents should remember previous messages."""
 
 
-class Conversation:
-    """Converation is used to store messages between the user and the agent."""
+class Message(TypedDict):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class Chat:
+    """Chat stores messages between the user and the agent."""
 
     def __init__(self):
-        self.messages: list[ChatCompletionMessageParam] = []
-
-    def clear(self):
-        self.messages = []
+        self.messages: list[Message] = []
+        self.queue = asyncio.Queue()
 
 
-class PersistentConversation(Conversation):
-    """Conversation that can be saved and loaded from a file."""
+class PersistentChat(Chat):
+    """Chat that can be saved and loaded from a file."""
 
     def __init__(self, name: str):
         super().__init__()
+        # TODO save in a dir
         self.filename = f"{name.lower()}_messages.jsonl"
 
     def save(self):
         with open(self.filename, "w") as f:
             for message in self.messages:
-                if message["role"] in ["user", "assistant"]:
-                    json.dump(message, f)
-                    f.write("\n")
+                json.dump(message, f)
+                f.write("\n")
 
     def load(self):
         with open(self.filename, "r") as f:
@@ -80,10 +80,14 @@ class PersistentConversation(Conversation):
 
 
 class Assistant(ABC):
-    """Assistants are used to generate responses to conversations."""
+    """Assistants are used to generate responses to chats."""
+
+    # TODO set name and description
+    # def __repr__(self):
+    #     return f"Assistant<{self.name}>"
 
     @abstractmethod
-    def run(self, conversation: Conversation) -> str: ...
+    def run(self, chat: Chat) -> Iterator[str]: ...
 
 
 class SimpleAssistant(Assistant):
@@ -94,24 +98,35 @@ class SimpleAssistant(Assistant):
         self._client = AzureOpenAI()
         self._toolset = Toolset(self, functions)
 
-    def run(self, conversation: Conversation) -> str:
-        logger.debug(f"Completing chat...\nLast message: {conversation.messages[-1]}")
+    def run(self, chat: Chat) -> Iterator[str]:
+        logger.debug(f"Completing chat...\nLast message: {chat.messages[-1]}")
+
         messages: Sequence[ChatCompletionMessageParam] = []
         messages.append(ChatCompletionSystemMessageParam(role="system", content=self.system_prompt))
-        messages.extend(conversation.messages)
+        for message in chat.messages:
+            if message["role"] == "user":
+                messages.append(ChatCompletionUserMessageParam(role="user", content=message["content"]))
+            elif message["role"] == "assistant":
+                messages.append(ChatCompletionAssistantMessageParam(role="assistant", content=message["content"]))
 
         completion = self._complete(messages)
-        tool_calls = self._toolset.process_response(completion)
-        while tool_calls:
-            messages.extend(tool_calls)
-            completion = self._complete(messages)
-            tool_calls = self._toolset.process_response(completion)
+        # tool_calls = self._toolset.process_response(completion)
+        # while tool_calls:
+        #     messages.extend(tool_calls)
+        #     completion = self._complete(messages)
+        #     tool_calls = self._toolset.process_response(completion)
 
-        content = completion.choices[0].message.content
-        assert isinstance(content, str)
-        return content
+        for chunk in completion:
+            content = chunk.choices[0].delta.content
+            if content:
+                print(f"Yielding: {content}")
+                yield content
 
-    def _complete(self, messages: list[ChatCompletionMessageParam]) -> ChatCompletion:
+        # content = completion.choices[0].message.content
+        # assert isinstance(content, str)
+        # return content
+
+    def _complete(self, messages: list[ChatCompletionMessageParam]) -> Stream[ChatCompletionChunk]:
         logger.info("Completing chat")
         for message in messages:
             logger.debug(message)
@@ -119,14 +134,30 @@ class SimpleAssistant(Assistant):
         completion = self._client.chat.completions.create(
             model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
             messages=messages,
+            stream=True,
             **self._tool_kwargs(),
         )
 
-        message = completion.choices[0].message
-        logger.info("%s: %s", message.role, message.content)
-        messages.append(_convert_assistant_message(message))
-
         return completion
+
+        # message = completion.choices[0].message
+        # logger.info("%s: %s", message.role, message.content)
+        # messages.append(_convert_assistant_message(message))
+
+        # final_tool_calls = {}
+        # for chunk in completion:
+        #     for tool_call in chunk.choices[0].delta.tool_calls or []:
+        #         index = tool_call.index
+
+        #         if index not in final_tool_calls:
+        #             final_tool_calls[index] = tool_call
+
+        #         final_tool_calls[index].function.arguments += tool_call.function.arguments
+
+        # for chunk in completion:
+        #     message = chunk.choices[0].message
+        #     logger.info("%s: %s", message.role, message.content)
+        #     messages.append(_convert_assistant_message(message))
 
     def _tool_kwargs(self) -> dict[str, Any]:
         tools = self._toolset.openai_schema()
@@ -135,23 +166,23 @@ class SimpleAssistant(Assistant):
         return {}
 
 
-def _convert_assistant_message(message: ChatCompletionMessage) -> ChatCompletionAssistantMessageParam:
-    if message.tool_calls:
-        tool_calls = list(map(_convert_tool_call, message.tool_calls))
-        return ChatCompletionAssistantMessageParam(role=message.role, content=message.content, tool_calls=tool_calls)
-    else:
-        return ChatCompletionAssistantMessageParam(role=message.role, content=message.content)
+# def _convert_assistant_message(message: ChatCompletionMessage) -> ChatCompletionAssistantMessageParam:
+#     if message.tool_calls:
+#         tool_calls = list(map(_convert_tool_call, message.tool_calls))
+#         return ChatCompletionAssistantMessageParam(role=message.role, content=message.content, tool_calls=tool_calls)
+#     else:
+#         return ChatCompletionAssistantMessageParam(role=message.role, content=message.content)
 
 
-def _convert_tool_call(tool_call: ChatCompletionMessageToolCall) -> ChatCompletionMessageToolCallParam:
-    return ChatCompletionMessageToolCallParam(
-        id=tool_call.id,
-        function=Function(
-            name=tool_call.function.name,
-            arguments=tool_call.function.arguments,
-        ),
-        type=tool_call.type,
-    )
+# def _convert_tool_call(tool_call: ChatCompletionMessageToolCall) -> ChatCompletionMessageToolCallParam:
+#     return ChatCompletionMessageToolCallParam(
+#         id=tool_call.id,
+#         function=Function(
+#             name=tool_call.function.name,
+#             arguments=tool_call.function.arguments,
+#         ),
+#         type=tool_call.type,
+#     )
 
 
 class DeclarativeAssistant(SimpleAssistant):
@@ -174,72 +205,65 @@ class DeclarativeAssistant(SimpleAssistant):
         super().__init__(prompt, functions)
 
 
-class StructuredOutput:
-    """Get structured output from a chat model."""
+# class StructuredOutput:
+#     """Get structured output from a chat model."""
 
-    def __init__(self, system_prompt: str, response_format: type[BaseModel]):
-        self.system_prompt = system_prompt
-        self.response_format = response_format
-        self._conversation = Conversation()
-        self._client = AzureOpenAI()
+#     def __init__(self, system_prompt: str, response_format: type[BaseModel]):
+#         self.system_prompt = system_prompt
+#         self.response_format = response_format
+#         self._chat = Chat()
+#         self._client = AzureOpenAI()
 
-    def add_example(self, user_message: str, response: BaseModel):
-        """Add an example to the prompt."""
-        self._conversation.messages.extend(
-            [
-                {"role": "system", "name": "example_user", "content": user_message},
-                {"role": "system", "name": "example_assistant", "content": response.model_dump_json()},
-            ]
-        )
+#     def add_example(self, user_message: str, response: BaseModel):
+#         """Add an example to the prompt."""
+#         self._chat.messages.extend(
+#             [
+#                 {"role": "system", "name": "example_user", "content": user_message},
+#                 {"role": "system", "name": "example_assistant", "content": response.model_dump_json()},
+#             ]
+#         )
 
-    def run(self, conversation: Conversation) -> object:
-        """Run the system prompt on conversation and return the parsed response."""
-        response = self._client.beta.chat.completions.parse(
-            model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
-            response_format=self.response_format,
-            messages=self._conversation.messages + conversation.messages,
-        )
-        instance = response.choices[0].message.parsed
-        assert isinstance(instance, self.response_format)
-        return instance
+#     def run(self, chat: Chat) -> object:
+#         """Run the system prompt on chat and return the parsed response."""
+#         response = self._client.beta.chat.completions.parse(
+#             model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
+#             response_format=self.response_format,
+#             messages=self._chat.messages + chat.messages,
+#         )
+#         instance = response.choices[0].message.parsed
+#         assert isinstance(instance, self.response_format)
+#         return instance
 
-    def run_user_message(self, user_message: str) -> object:
-        """Run the system prompt on a user message and return the parsed response."""
-        conversation = Conversation()
-        conversation.messages.append({"role": "user", "content": user_message})
-        return self.run(conversation)
+#     def run_user_message(self, user_message: str) -> object:
+#         """Run the system prompt on a user message and return the parsed response."""
+#         chat = Chat()
+#         chat.messages.append({"role": "user", "content": user_message})
+#         return self.run(chat)
 
 
-class ConversationalAgent(Agent):
+# class ChatAgent(Agent):
 
-    def __init__(self, name: str, description: str, assistant: Assistant):
-        super().__init__()
-        self.name = name
-        self.description = description
-        self.assistant = assistant
-        self.conversation = PersistentConversation(name)
-        try:
-            self.conversation.load()
-        except FileNotFoundError:
-            pass
+#     def __init__(self, name: str, description: str, assistant: Assistant):
+#         super().__init__()
+#         self.name = name
+#         self.description = description
+#         self.assistant = assistant
+#         self.chat = PersistentChat(name)
+#         try:
+#             self.chat.load()
+#         except FileNotFoundError:
+#             pass
 
-    def message(self, input: str) -> Agent.Return:
-        if input.strip() == "/clear":
-            self.conversation.clear()
-            response = "Conversation cleared"
-        else:
-            self.conversation.messages.append({"role": "user", "content": input})
-            response = self.assistant.run(self.conversation)
-            self.conversation.messages.append({"role": "assistant", "content": response})
-        self.conversation.save()
-        yield response
-
-    def history(self) -> list[MessageDict]:
-        ret = []
-        for message in self.conversation.messages:
-            if message["role"] in ["user", "assistant"]:
-                ret.append({"role": message["role"], "content": message["content"]})  # type: ignore
-        return ret
+#     def message(self, input: str) -> Agent.Return:
+#         if input.strip() == "/clear":
+#             self.chat.clear()
+#             response = "Chat cleared"
+#         else:
+#             self.chat.messages.append({"role": "user", "content": input})
+#             response = self.assistant.run(self.chat)
+#             self.chat.messages.append({"role": "assistant", "content": response})
+#         self.chat.save()
+#         yield response
 
 
 if __name__ == "__main__":
@@ -262,10 +286,10 @@ if __name__ == "__main__":
             """
             return a + b
 
-    conversation = Conversation()
-    conversation.messages.append({"role": "user", "content": "What is three plus one?"})
+    chat = Chat()
+    chat.messages.append({"role": "user", "content": "What is three plus one?"})
 
     mathematician = Mathematician()
-    message = mathematician.run(conversation)
+    message = mathematician.run(chat)
 
     print("Response:", message)

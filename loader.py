@@ -4,12 +4,15 @@ from typing import TypeVar
 
 from langchain_core.tools.structured import StructuredTool
 
-from framework import Agent
+from framework import Assistant
 from logger import logger
 
+# def load_agents() -> dict[str, Agent]:
+#     return load_objects(Agent, "agents")
 
-def load_agents() -> dict[str, Agent]:
-    return load_objects(Agent, "agents")
+
+def load_assistants() -> dict[str, Assistant]:
+    return load_objects(Assistant, "assistants")
 
 
 def load_tools() -> dict[str, StructuredTool]:

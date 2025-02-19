@@ -2,20 +2,20 @@
 Global registry for agents.
 """
 
-from framework import Agent
+from framework import Assistant
 
 # Global dictionary of registered agents.
-agents: dict[str, Agent] = {}
+assistants: dict[str, Assistant] = {}
 
 
-def register(agent: Agent):
-    agents[agent.name] = agent
+def register(name: str, assistant: Assistant):
+    assistants[name] = assistant
 
 
-def get(name: str) -> Agent:
-    return agents[name]
+def get(name: str) -> Assistant:
+    return assistants[name]
 
 
-def list() -> list[Agent]:
+def list() -> list[Assistant]:
     """Returns a list of all registered agents that can be used by Planner agent."""
-    return [agent for agent in agents.values() if not agent.system]
+    return [assistant for assistant in assistants.values()]

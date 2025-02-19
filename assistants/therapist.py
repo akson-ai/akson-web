@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from framework import ConversationalAgent, DeclarativeAssistant
+from framework import DeclarativeAssistant
 
 
 class TemporalContext(BaseModel):
@@ -217,8 +217,8 @@ class Therapist(DeclarativeAssistant):
             f.write(f"{info.model_dump_json()}\n")
 
 
-therapist = ConversationalAgent(
-    name="Therapist",
-    description="A conversational agent that helps users to document their life.",
-    assistant=Therapist(),
-)
+# therapist = ChatAgent(
+#     name="Therapist",
+#     description="A conversational agent that helps users to document their life.",
+#     assistant=Therapist(),
+# )

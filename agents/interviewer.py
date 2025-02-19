@@ -1,4 +1,4 @@
-from framework import Agent, ConversationalAgent, SimpleAssistant
+from framework import Agent, ChatAgent, SimpleAssistant
 
 # {{{ input
 company_name = """ACME Works, Inc."""
@@ -239,7 +239,7 @@ Maintain a professional and positive tone while being clear about expectations a
 # }}}
 
 
-class Interviewer(ConversationalAgent):
+class Interviewer(ChatAgent):
 
     def __init__(self, company_name, job_title, job_description):
         super().__init__(

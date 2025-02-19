@@ -4,7 +4,7 @@ import time
 import putiopy
 import requests
 
-from framework import ConversationalAgent, DeclarativeAssistant
+from framework import DeclarativeAssistant
 
 PUTIO_TOKEN = os.environ["PUTIO_TOKEN"]
 
@@ -68,8 +68,8 @@ class MovieAssistant(DeclarativeAssistant):
         return "Timeout while downloading the video."
 
 
-movie_gpt = ConversationalAgent(
-    name="MovieGPT",
-    description="A movie agent that helps users to watch movies online.",
-    assistant=MovieAssistant(),
-)
+# movie_gpt = ChatAgent(
+#     name="MovieGPT",
+#     description="A movie agent that helps users to watch movies online.",
+#     assistant=MovieAssistant(),
+# )
