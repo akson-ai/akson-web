@@ -27,13 +27,13 @@ chats = defaultdict(Chat)
 app = FastAPI()
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def index():
     """Redirect to the chat app."""
     return RedirectResponse(f"/chat?id={uuid.uuid4()}")
 
 
-@app.get("/chat")
+@app.get("/chat", include_in_schema=False)
 async def get_chat_app():
     """Serve the chat web app."""
     return FileResponse("web/chat.html")
