@@ -142,7 +142,6 @@ class SimpleAssistant(Assistant):
         self._client = AsyncAzureOpenAI()
         self._toolset = Toolset(self, functions)
 
-    # TODO does this need to by async?
     async def run(self, chat: Chat) -> None:
         logger.debug(f"Completing chat...\nLast message: {chat.messages[-1]}")
 
@@ -150,17 +149,14 @@ class SimpleAssistant(Assistant):
         # Here, we convert chat messages in web UI to OpenAI format.
         messages = self._get_openai_messages(chat)
 
-        await chat.add_message("Asking OpenAI...")
         message = await self._complete(messages, chat)
         messages.append(_convert_assistant_message(message))
 
         # We keep continue hitting OpenAI API until there are no more tool calls.
         while message.tool_calls:
-            await chat.add_message("Processing tool call...")
             tool_calls = self._toolset.process_tool_calls(message.tool_calls)
             messages.extend(tool_calls)
 
-            await chat.add_message("Asking OpenAI...")
             message = await self._complete(messages, chat)
             messages.append(_convert_assistant_message(message))
 
