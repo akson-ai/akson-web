@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Iterator, Literal, Sequence, TypedDict
 
 from fastapi import Request
-from openai import AzureOpenAI
+from openai import AsyncAzureOpenAI
 from openai.lib.streaming.chat import (
     ChunkEvent,
     ContentDeltaEvent,
@@ -139,7 +139,7 @@ class SimpleAssistant(Assistant):
 
     def __init__(self, system_prompt: str, functions: list[Callable] = []):
         self.system_prompt = system_prompt
-        self._client = AzureOpenAI()
+        self._client = AsyncAzureOpenAI()
         self._toolset = Toolset(self, functions)
 
     # TODO does this need to by async?
@@ -181,12 +181,12 @@ class SimpleAssistant(Assistant):
 
         await chat.begin_message()
 
-        with self._client.beta.chat.completions.stream(
+        async with self._client.beta.chat.completions.stream(
             model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
             messages=messages,
             **self._tool_kwargs(),
         ) as stream:
-            for event in stream:
+            async for event in stream:
                 print(f"Event type: {event.type}")
                 match event:  # https://github.com/openai/openai-python/blob/main/helpers.md#chat-completions-events
                     case ContentDeltaEvent():
