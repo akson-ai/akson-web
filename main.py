@@ -98,6 +98,7 @@ async def handle_message(
     try:
         await assistant.run(chat)
     except ClientDisconnect:
+        # TODO save half messages
         logger.info("Client disconnected")
     finally:
         chat._request = None
