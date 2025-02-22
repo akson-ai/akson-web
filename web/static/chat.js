@@ -19,7 +19,7 @@ function ChatApp() {
 
   React.useEffect(() => {
     // Load chat history
-    fetch(`/history/${chatId}`)
+    fetch(`/${chatId}/history`)
       .then((res) => res.json())
       .then((history) => {
         setMessages(history.map(msg => ({
@@ -39,7 +39,7 @@ function ChatApp() {
       });
 
     // Set up SSE listener
-    const eventSource = new EventSource(`/events/${chatId}`);
+    const eventSource = new EventSource(`/${chatId}/events`);
     eventSource.onmessage = function(event) {
       const data = JSON.parse(event.data);
       console.log(data)
@@ -91,7 +91,7 @@ function ChatApp() {
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
 
-    fetch(`/message/${chatId}`, {
+    fetch(`/${chatId}/message`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

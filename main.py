@@ -63,7 +63,7 @@ async def get_assistants():
 
 
 # TODO save all chat state, not only messages
-@app.get("/history/{chat_id}")
+@app.get("/{chat_id}/history")
 async def get_history(chat: PersistentChat = Depends(get_chat)):
     """Return the history of a chat session."""
     history = []
@@ -77,8 +77,7 @@ def get_assistant(name: str = Body(alias="assistant")) -> Assistant:
     return assistants[name]
 
 
-# TODO update endpoint paths to /<chat_id>/resource
-@app.post("/message/{chat_id}")
+@app.post("/{chat_id}/message")
 async def handle_message(
     request: Request,
     content: str = Body(...),
@@ -105,7 +104,7 @@ async def handle_message(
         chat.save()
 
 
-@app.get("/events/{chat_id}")
+@app.get("/{chat_id}/events")
 async def stream_events(chat: PersistentChat = Depends(get_chat)):
     """Stream events to the client."""
 
