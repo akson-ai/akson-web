@@ -17,6 +17,13 @@ function ChatApp() {
   const urlParams = new URLSearchParams(window.location.search);
   const chatId = urlParams.get('id');
 
+  // TODO save selected assistant
+  // TODO add assistant name to assistant messages
+  // TODO add avatar to messages
+  // TODO allow deleting individual messages
+  // TODO allow editing of messages
+  // TODO allow adding of new messages
+
   React.useEffect(() => {
     // Load chat state
     fetch(`/${chatId}/state`)

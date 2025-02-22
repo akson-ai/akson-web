@@ -55,6 +55,7 @@ class Message(TypedDict):
 
     role: Literal["user", "assistant"]
     content: str
+    # TODO add id
 
 
 class ChatState(BaseModel):
