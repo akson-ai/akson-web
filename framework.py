@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Iterator, Literal, Sequence, TypedDict
@@ -22,6 +21,7 @@ from openai.types.chat import (
     ParsedChatCompletionMessage,
 )
 from openai.types.chat.chat_completion_message_tool_call_param import Function
+from pydantic import BaseModel
 from starlette.requests import ClientDisconnect
 
 from function_calling import Toolset
@@ -57,11 +57,46 @@ class Message(TypedDict):
     content: str
 
 
-class Chat:
-    """Chat stores messages between the user and the agent."""
+class ChatState(BaseModel):
+    """Chat that can be saved and loaded from a file."""
 
-    def __init__(self):
-        self.messages: list[Message] = []  # TODO encapsulate messages
+    id: str
+    assistant: str
+    messages: list[Message]
+
+    @classmethod
+    def create_new(cls, id: str, assistant: str):
+        return cls(
+            id=id,
+            assistant=assistant,
+            messages=[],
+        )
+
+    @classmethod
+    def load_from_disk(cls, chat_id: str):
+        with open(cls.file_path(chat_id), "r") as f:
+            content = f.read()
+            return cls.model_validate_json(content)
+
+    def save_to_disk(self):
+        os.makedirs("chats", exist_ok=True)
+        with open(self.file_path(self.id), "w") as f:
+            f.write(self.model_dump_json())
+
+    @staticmethod
+    def file_path(id: str):
+        return os.path.join("chats", f"{id}.json")
+
+
+class Chat:
+    """
+    Chat holds state and handles sending and receiving messages.
+    It is passed to the assistant's run method.
+    This serves as the main interface between the assistant and the web application.
+    """
+
+    def __init__(self, state: ChatState):
+        self.state = state
         self._request: Request | None
         self._queue = asyncio.Queue()
 
@@ -83,7 +118,7 @@ class Chat:
                 logger.info("Client disconnected, stopping streaming")
                 break
 
-        self.messages.append({"role": "assistant", "content": "".join(chunks)})
+        self.state.messages.append({"role": "assistant", "content": "".join(chunks)})
 
     async def begin_message(self):
         self._current_message = []
@@ -95,7 +130,7 @@ class Chat:
 
     async def end_message(self) -> str:
         message = "".join(self._current_message)
-        self.messages.append({"role": "assistant", "content": message})
+        self.state.messages.append({"role": "assistant", "content": message})
         await self._queue_message({"control": "end_message"})
         return message
 
@@ -107,27 +142,6 @@ class Chat:
         if await self._request.is_disconnected():
             raise ClientDisconnect
         await self._queue.put(message)
-
-
-class PersistentChat(Chat):
-    """Chat that can be saved and loaded from a file."""
-
-    def __init__(self, id: str):
-        super().__init__()
-        self.path = os.path.join("chats", f"chat_{id}_messages.jsonl")
-
-    def save(self):
-        os.makedirs("chats", exist_ok=True)
-        with open(self.path, "w") as f:
-            for message in self.messages:
-                json.dump(message, f)
-                f.write("\n")
-
-    def load(self):
-        with open(self.path, "r") as f:
-            for line in f:
-                message = json.loads(line)
-                self.messages.append(message)
 
 
 class Assistant(ABC):
@@ -150,7 +164,7 @@ class SimpleAssistant(Assistant):
         self._toolset = Toolset(self, functions)
 
     async def run(self, chat: Chat) -> None:
-        logger.debug(f"Completing chat...\nLast message: {chat.messages[-1]}")
+        logger.debug(f"Completing chat...\nLast message: {chat.state.messages[-1]}")
 
         # These messages are sent to OpenAI in chat completion request.
         # Here, we convert chat messages in web UI to OpenAI format.
@@ -170,7 +184,7 @@ class SimpleAssistant(Assistant):
     def _get_openai_messages(self, chat: Chat) -> list[ChatCompletionMessageParam]:
         messages: Sequence[ChatCompletionMessageParam] = []
         messages.append(ChatCompletionSystemMessageParam(role="system", content=self.system_prompt))
-        for message in chat.messages:
+        for message in chat.state.messages:
             if message["role"] == "user":
                 messages.append(ChatCompletionUserMessageParam(role="user", content=message["content"]))
             elif message["role"] == "assistant":
@@ -333,8 +347,8 @@ if __name__ == "__main__":
             """
             return a + b
 
-    chat = Chat()
-    chat.messages.append({"role": "user", "content": "What is three plus one?"})
+    chat = Chat(state=ChatState.create_new("id", "assistant"))
+    chat.state.messages.append({"role": "user", "content": "What is three plus one?"})
 
     mathematician = Mathematician()
     message = mathematician.run(chat)

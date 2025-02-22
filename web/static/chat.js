@@ -18,11 +18,12 @@ function ChatApp() {
   const chatId = urlParams.get('id');
 
   React.useEffect(() => {
-    // Load chat history
-    fetch(`/${chatId}/history`)
+    // Load chat state
+    fetch(`/${chatId}/state`)
       .then((res) => res.json())
-      .then((history) => {
-        setMessages(history.map(msg => ({
+      .then((state) => {
+        setSelectedAssistant(state.assistant);
+        setMessages(state.messages.map(msg => ({
           sender: msg.role,
           text: msg.content
         })));
