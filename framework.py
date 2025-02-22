@@ -207,12 +207,11 @@ class SimpleAssistant(Assistant):
                                 # openai library raises following exceptions while processing the stream, code never reaches here:
                                 # - LengthFinishReasonError
                                 # - ContentFilterFinishReasonError
-                                raise Exception(f"finish_reason={choice.finish_reason}")
+                                ...
                             case "function_call":
                                 # Deprecated. API never sends this.
-                                raise Exception(f"finish_reason={choice.finish_reason}")
-                            case _:
-                                raise NotImplementedError(f"finish_reason={choice.finish_reason}")
+                                ...
+                        raise NotImplementedError(f"finish_reason={choice.finish_reason}")
 
         raise Exception("Stream ended unexpectedly")
 
