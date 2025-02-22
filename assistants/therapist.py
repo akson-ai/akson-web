@@ -217,8 +217,4 @@ class Therapist(DeclarativeAssistant):
             f.write(f"{info.model_dump_json()}\n")
 
 
-# therapist = ChatAgent(
-#     name="Therapist",
-#     description="A conversational agent that helps users to document their life.",
-#     assistant=Therapist(),
-# )
+therapist = Therapist()

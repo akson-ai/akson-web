@@ -68,8 +68,4 @@ class MovieAssistant(DeclarativeAssistant):
         return "Timeout while downloading the video."
 
 
-# movie_gpt = ChatAgent(
-#     name="MovieGPT",
-#     description="A movie agent that helps users to watch movies online.",
-#     assistant=MovieAssistant(),
-# )
+movie = MovieAssistant()
