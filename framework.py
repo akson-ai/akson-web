@@ -5,20 +5,26 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Iterator, Literal, Sequence, TypedDict
 
 from fastapi import Request
-from openai import AzureOpenAI, Stream
+from openai import AzureOpenAI
+from openai.lib.streaming.chat import (
+    ChunkEvent,
+    ContentDeltaEvent,
+    ContentDoneEvent,
+    FunctionToolCallArgumentsDeltaEvent,
+    FunctionToolCallArgumentsDoneEvent,
+    RefusalDeltaEvent,
+    RefusalDoneEvent,
+)
 from openai.types.chat import (
-    ChatCompletion,
     ChatCompletionAssistantMessageParam,
-    ChatCompletionChunk,
-    ChatCompletionMessage,
     ChatCompletionMessageParam,
     ChatCompletionMessageToolCall,
     ChatCompletionMessageToolCallParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
+    ParsedChatCompletionMessage,
 )
 from openai.types.chat.chat_completion_message_tool_call_param import Function
-from pydantic import BaseModel
 
 from function_calling import Toolset
 from logger import logger
@@ -81,6 +87,20 @@ class Chat:
 
         self.messages.append({"role": "assistant", "content": "".join(chunks)})
 
+    async def begin_message(self):
+        self._current_message = []
+        await self._queue.put({"control": "new_message"})
+
+    async def add_chunk(self, chunk: str):
+        self._current_message.append(chunk)
+        await self._queue.put({"chunk": chunk})
+
+    async def end_message(self) -> str:
+        message = "".join(self._current_message)
+        self.messages.append({"role": "assistant", "content": message})
+        await self._queue.put({"control": "end_message"})
+        return message
+
     async def _send_control(self, code: str):
         await self._queue.put({"control": code})
 
@@ -125,9 +145,29 @@ class SimpleAssistant(Assistant):
         self._client = AzureOpenAI()
         self._toolset = Toolset(self, functions)
 
+    # TODO does this need to by async?
     async def run(self, chat: Chat) -> None:
         logger.debug(f"Completing chat...\nLast message: {chat.messages[-1]}")
 
+        # These messages are sent to OpenAI in chat completion request.
+        # Here, we convert chat messages in web UI to OpenAI format.
+        messages = self._get_openai_messages(chat)
+
+        await chat.add_message("Asking OpenAI...")
+        message = await self._complete(messages, chat)
+        messages.append(_convert_assistant_message(message))
+
+        # We keep continue hitting OpenAI API until there are no more tool calls.
+        while message.tool_calls:
+            await chat.add_message("Processing tool call...")
+            tool_calls = self._toolset.process_tool_calls(message.tool_calls)
+            messages.extend(tool_calls)
+
+            await chat.add_message("Asking OpenAI...")
+            message = await self._complete(messages, chat)
+            messages.append(_convert_assistant_message(message))
+
+    def _get_openai_messages(self, chat: Chat) -> list[ChatCompletionMessageParam]:
         messages: Sequence[ChatCompletionMessageParam] = []
         messages.append(ChatCompletionSystemMessageParam(role="system", content=self.system_prompt))
         for message in chat.messages:
@@ -135,55 +175,56 @@ class SimpleAssistant(Assistant):
                 messages.append(ChatCompletionUserMessageParam(role="user", content=message["content"]))
             elif message["role"] == "assistant":
                 messages.append(ChatCompletionAssistantMessageParam(role="assistant", content=message["content"]))
+        return messages
 
-        completion = self._complete(messages)
-        # tool_calls = self._toolset.process_response(completion)
-        # while tool_calls:
-        #     messages.extend(tool_calls)
-        #     completion = self._complete(messages)
-        #     tool_calls = self._toolset.process_response(completion)
-
-        def real_message() -> Iterator[str]:
-            for chunk in completion:
-                content = chunk.choices[0].delta.content
-                if content:
-                    print(f"Yielding: {content}")
-                    yield content
-
-        await chat.add_message(real_message())
-
-    def _complete(self, messages: list[ChatCompletionMessageParam]) -> Stream[ChatCompletionChunk]:
+    async def _complete(self, messages: list[ChatCompletionMessageParam], chat: Chat) -> ParsedChatCompletionMessage:
         logger.info("Completing chat")
         for message in messages:
             logger.debug(message)
 
-        completion = self._client.chat.completions.create(
+        await chat.begin_message()
+
+        with self._client.beta.chat.completions.stream(
             model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
             messages=messages,
-            stream=True,
             **self._tool_kwargs(),
-        )
+        ) as stream:
+            for event in stream:
+                print(f"Event type: {event.type}")
+                match event:  # https://github.com/openai/openai-python/blob/main/helpers.md#chat-completions-events
+                    case ChunkEvent(snapshot=completion) if event.chunk.choices[0].finish_reason:
+                        choice = completion.choices[0]
+                        match choice.finish_reason:
+                            case "stop" | "tool_calls":
+                                # Model reached natural stop point.
+                                return choice.message
+                            case "length" | "content_filter":
+                                # openai library raises following exceptions while processing the stream, code never reaches here:
+                                # - LengthFinishReasonError
+                                # - ContentFilterFinishReasonError
+                                raise Exception(f"finish_reason={choice.finish_reason}")
+                            case "function_call":
+                                # Deprecated. API never sends this.
+                                raise Exception(f"finish_reason={choice.finish_reason}")
+                            case _:
+                                raise NotImplementedError(f"finish_reason={choice.finish_reason}")
 
-        return completion
+                    case ContentDeltaEvent():
+                        await chat.add_chunk(event.delta)
+                    case ContentDoneEvent():
+                        await chat.end_message()
 
-        # message = completion.choices[0].message
-        # logger.info("%s: %s", message.role, message.content)
-        # messages.append(_convert_assistant_message(message))
+                    case RefusalDeltaEvent():
+                        await chat.add_chunk(event.delta)
+                    case RefusalDoneEvent():
+                        await chat.end_message()
 
-        # final_tool_calls = {}
-        # for chunk in completion:
-        #     for tool_call in chunk.choices[0].delta.tool_calls or []:
-        #         index = tool_call.index
+                    case FunctionToolCallArgumentsDeltaEvent():
+                        await chat.add_chunk(event.arguments_delta)
+                    case FunctionToolCallArgumentsDoneEvent():
+                        await chat.end_message()
 
-        #         if index not in final_tool_calls:
-        #             final_tool_calls[index] = tool_call
-
-        #         final_tool_calls[index].function.arguments += tool_call.function.arguments
-
-        # for chunk in completion:
-        #     message = chunk.choices[0].message
-        #     logger.info("%s: %s", message.role, message.content)
-        #     messages.append(_convert_assistant_message(message))
+        raise Exception("Stream ended unexpectedly")
 
     def _tool_kwargs(self) -> dict[str, Any]:
         tools = self._toolset.openai_schema()
@@ -192,23 +233,23 @@ class SimpleAssistant(Assistant):
         return {}
 
 
-# def _convert_assistant_message(message: ChatCompletionMessage) -> ChatCompletionAssistantMessageParam:
-#     if message.tool_calls:
-#         tool_calls = list(map(_convert_tool_call, message.tool_calls))
-#         return ChatCompletionAssistantMessageParam(role=message.role, content=message.content, tool_calls=tool_calls)
-#     else:
-#         return ChatCompletionAssistantMessageParam(role=message.role, content=message.content)
+def _convert_assistant_message(message: ParsedChatCompletionMessage) -> ChatCompletionAssistantMessageParam:
+    if message.tool_calls:
+        tool_calls = list(map(_convert_tool_call, message.tool_calls))
+        return ChatCompletionAssistantMessageParam(role="assistant", content=message.content, tool_calls=tool_calls)
+    else:
+        return ChatCompletionAssistantMessageParam(role="assistant", content=message.content)
 
 
-# def _convert_tool_call(tool_call: ChatCompletionMessageToolCall) -> ChatCompletionMessageToolCallParam:
-#     return ChatCompletionMessageToolCallParam(
-#         id=tool_call.id,
-#         function=Function(
-#             name=tool_call.function.name,
-#             arguments=tool_call.function.arguments,
-#         ),
-#         type=tool_call.type,
-#     )
+def _convert_tool_call(tool_call: ChatCompletionMessageToolCall) -> ChatCompletionMessageToolCallParam:
+    return ChatCompletionMessageToolCallParam(
+        id=tool_call.id,
+        function=Function(
+            name=tool_call.function.name,
+            arguments=tool_call.function.arguments,
+        ),
+        type=tool_call.type,
+    )
 
 
 class DeclarativeAssistant(SimpleAssistant):

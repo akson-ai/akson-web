@@ -3,12 +3,11 @@ from inspect import Parameter, getdoc, signature
 from typing import Any, Callable, Union, get_args, get_origin, get_type_hints
 
 import docstring_parser
-from openai import NOT_GIVEN, pydantic_function_tool
-from openai.lib._parsing._completions import parse_chat_completion
+from openai import pydantic_function_tool
 from openai.types.chat import (
-    ChatCompletion,
     ChatCompletionToolMessageParam,
     ChatCompletionToolParam,
+    ParsedFunctionToolCall,
 )
 from pydantic import BaseModel, Field, create_model
 
@@ -24,19 +23,11 @@ class Toolset:
 
     def openai_schema(self) -> list[ChatCompletionToolParam]:
         """Returns the list of tools to be passed into completion reqeust."""
+        # TODO remove pydantic model conversion
         return [pydantic_function_tool(function_to_pydantic_model(f)) for f in self.functions.values()]
 
-    def process_response(self, completion: ChatCompletion) -> list[ChatCompletionToolMessageParam]:
+    def process_tool_calls(self, tool_calls: list[ParsedFunctionToolCall]) -> list[ChatCompletionToolMessageParam]:
         """This is called each time a response is received from completion method."""
-        completion = parse_chat_completion(
-            chat_completion=completion, input_tools=self.openai_schema(), response_format=NOT_GIVEN
-        )
-
-        tool_calls = completion.choices[0].message.tool_calls
-        if not tool_calls:
-            logger.debug("No tool calls")
-            return []
-
         logger.info("Number of tool calls: %s", len(tool_calls))
         messages = []
         for tool_call in tool_calls:
