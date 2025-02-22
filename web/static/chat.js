@@ -1,6 +1,6 @@
 function ChatMessage({ sender, text }) {
   return (
-    <div className={`chat ${sender === 'user' ? 'chat-start' : 'chat-end'}`}>
+    <div className={`chat ${sender === 'user' ? 'chat-end' : 'chat-start'}`}>
       <div className="chat-bubble">{text}</div>
     </div>
   );
