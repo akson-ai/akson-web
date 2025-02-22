@@ -195,22 +195,11 @@ class SimpleAssistant(Assistant):
                         await chat.add_chunk(event.delta)
                     case FunctionToolCallArgumentsDeltaEvent():
                         await chat.add_chunk(event.arguments_delta)
-                    case ChunkEvent(snapshot=completion) if event.chunk.choices[0].finish_reason:
+                    case ChunkEvent() if event.chunk.choices[0].finish_reason:
                         await chat.end_message()
-
-                        choice = completion.choices[0]
-                        match choice.finish_reason:
-                            case "stop" | "tool_calls":
-                                # Model reached natural stop point.
-                                return choice.message
-                            case "length" | "content_filter":
-                                # openai library raises following exceptions while processing the stream, code never reaches here:
-                                # - LengthFinishReasonError
-                                # - ContentFilterFinishReasonError
-                                ...
-                            case "function_call":
-                                # Deprecated. API never sends this.
-                                ...
+                        choice = event.snapshot.choices[0]
+                        if choice.finish_reason in ("stop", "tool_calls"):
+                            return choice.message
                         raise NotImplementedError(f"finish_reason={choice.finish_reason}")
 
         raise Exception("Stream ended unexpectedly")
