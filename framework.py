@@ -55,7 +55,7 @@ class Message(TypedDict):
 
     role: Literal["user", "assistant"]
     content: str
-    # TODO add id
+    # TODO add id to Message
 
 
 class ChatState(BaseModel):
@@ -148,7 +148,8 @@ class Chat:
 class Assistant(ABC):
     """Assistants are used to generate responses to chats."""
 
-    # TODO set name and description
+    # TODO set assistant's name and description
+
     # def __repr__(self):
     #     return f"Assistant<{self.name}>"
 

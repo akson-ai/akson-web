@@ -23,6 +23,7 @@ function ChatApp() {
   // TODO allow deleting individual messages
   // TODO allow editing of messages
   // TODO allow adding of new messages
+  // TODO allow forking of chats
 
   React.useEffect(() => {
     // Load chat state
