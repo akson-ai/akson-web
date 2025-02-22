@@ -77,6 +77,7 @@ def get_assistant(name: str = Body(alias="assistant")) -> Assistant:
     return assistants[name]
 
 
+# TODO update endpoint paths to /<chat_id>/resource
 @app.post("/message/{chat_id}")
 async def handle_message(
     request: Request,
