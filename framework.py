@@ -114,17 +114,17 @@ class PersistentChat(Chat):
 
     def __init__(self, id: str):
         super().__init__()
-        # TODO save in a dir
-        self.filename = f"chat_{id}_messages.jsonl"
+        self.path = os.path.join("chats", f"chat_{id}_messages.jsonl")
 
     def save(self):
-        with open(self.filename, "w") as f:
+        os.makedirs("chats", exist_ok=True)
+        with open(self.path, "w") as f:
             for message in self.messages:
                 json.dump(message, f)
                 f.write("\n")
 
     def load(self):
-        with open(self.filename, "r") as f:
+        with open(self.path, "r") as f:
             for line in f:
                 message = json.loads(line)
                 self.messages.append(message)
