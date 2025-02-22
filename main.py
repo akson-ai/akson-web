@@ -85,17 +85,17 @@ async def handle_message(
     chat: Chat = Depends(_get_chat),
 ):
     """Handle a message from the client."""
-    if content.strip() == "/clear":
-        chat.state.messages.clear()
-        chat.state.save_to_disk()
-        logger.info("Chat cleared")
-        await chat._send_control("clear")
-        return
 
     chat.state.messages.append({"role": "user", "content": content})
 
     chat._request = request
     try:
+        if content.strip() == "/clear":
+            chat.state.messages.clear()
+            chat.state.save_to_disk()
+            logger.info("Chat cleared")
+            await chat._send_control("clear")
+            return
         await assistant.run(chat)
     except ClientDisconnect:
         # TODO save interrupted messages
