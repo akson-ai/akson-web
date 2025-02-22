@@ -9,11 +9,8 @@ from openai import AzureOpenAI
 from openai.lib.streaming.chat import (
     ChunkEvent,
     ContentDeltaEvent,
-    ContentDoneEvent,
     FunctionToolCallArgumentsDeltaEvent,
-    FunctionToolCallArgumentsDoneEvent,
     RefusalDeltaEvent,
-    RefusalDoneEvent,
 )
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
@@ -192,7 +189,15 @@ class SimpleAssistant(Assistant):
             for event in stream:
                 print(f"Event type: {event.type}")
                 match event:  # https://github.com/openai/openai-python/blob/main/helpers.md#chat-completions-events
+                    case ContentDeltaEvent():
+                        await chat.add_chunk(event.delta)
+                    case RefusalDeltaEvent():
+                        await chat.add_chunk(event.delta)
+                    case FunctionToolCallArgumentsDeltaEvent():
+                        await chat.add_chunk(event.arguments_delta)
                     case ChunkEvent(snapshot=completion) if event.chunk.choices[0].finish_reason:
+                        await chat.end_message()
+
                         choice = completion.choices[0]
                         match choice.finish_reason:
                             case "stop" | "tool_calls":
@@ -208,21 +213,6 @@ class SimpleAssistant(Assistant):
                                 raise Exception(f"finish_reason={choice.finish_reason}")
                             case _:
                                 raise NotImplementedError(f"finish_reason={choice.finish_reason}")
-
-                    case ContentDeltaEvent():
-                        await chat.add_chunk(event.delta)
-                    case ContentDoneEvent():
-                        await chat.end_message()
-
-                    case RefusalDeltaEvent():
-                        await chat.add_chunk(event.delta)
-                    case RefusalDoneEvent():
-                        await chat.end_message()
-
-                    case FunctionToolCallArgumentsDeltaEvent():
-                        await chat.add_chunk(event.arguments_delta)
-                    case FunctionToolCallArgumentsDoneEvent():
-                        await chat.end_message()
 
         raise Exception("Stream ended unexpectedly")
 
