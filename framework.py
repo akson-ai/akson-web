@@ -51,6 +51,8 @@ from logger import logger
 
 
 class Message(TypedDict):
+    """Messages that are inside a chat."""
+
     role: Literal["user", "assistant"]
     content: str
 
