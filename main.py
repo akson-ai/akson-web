@@ -59,7 +59,7 @@ async def get_chat_app():
 @app.get("/assistants")
 async def get_assistants():
     """Return a list of available assistants."""
-    return list({"name": name} for name in assistants.keys())
+    return list({"name": name} for name in sorted(assistants.keys()))
 
 
 # TODO save all chat state, not only messages
