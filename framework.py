@@ -63,7 +63,6 @@ class Chat:
         self._queue = asyncio.Queue()
 
     async def add_message(self, message: str | Iterator[str]):
-        print(f"Adding message: {message}")
         await self._queue.put({"control": "new_message"})
 
         if isinstance(message, str):
@@ -74,7 +73,6 @@ class Chat:
         chunks = []
         for chunk in stream:
             chunks.append(chunk)
-            print(f"Putting queue: {chunk}")
             await self._queue.put({"chunk": chunk})
 
             assert isinstance(self._request, Request)
@@ -183,7 +181,6 @@ class SimpleAssistant(Assistant):
             **self._tool_kwargs(),
         ) as stream:
             async for event in stream:
-                print(f"Event type: {event.type}")
                 match event:  # https://github.com/openai/openai-python/blob/main/helpers.md#chat-completions-events
                     case ContentDeltaEvent():
                         await chat.add_chunk(event.delta)
