@@ -22,6 +22,7 @@ from openai.types.chat import (
     ParsedChatCompletionMessage,
 )
 from openai.types.chat.chat_completion_message_tool_call_param import Function
+from starlette.requests import ClientDisconnect
 
 from function_calling import Toolset
 from logger import logger
@@ -63,7 +64,7 @@ class Chat:
         self._queue = asyncio.Queue()
 
     async def add_message(self, message: str | Iterator[str]):
-        await self._queue.put({"control": "new_message"})
+        await self._queue_message({"control": "new_message"})
 
         if isinstance(message, str):
             stream = [message]
@@ -73,7 +74,7 @@ class Chat:
         chunks = []
         for chunk in stream:
             chunks.append(chunk)
-            await self._queue.put({"chunk": chunk})
+            await self._queue_message({"chunk": chunk})
 
             assert isinstance(self._request, Request)
             if await self._request.is_disconnected():
@@ -84,20 +85,26 @@ class Chat:
 
     async def begin_message(self):
         self._current_message = []
-        await self._queue.put({"control": "new_message"})
+        await self._queue_message({"control": "new_message"})
 
     async def add_chunk(self, chunk: str):
         self._current_message.append(chunk)
-        await self._queue.put({"chunk": chunk})
+        await self._queue_message({"chunk": chunk})
 
     async def end_message(self) -> str:
         message = "".join(self._current_message)
         self.messages.append({"role": "assistant", "content": message})
-        await self._queue.put({"control": "end_message"})
+        await self._queue_message({"control": "end_message"})
         return message
 
     async def _send_control(self, code: str):
-        await self._queue.put({"control": code})
+        await self._queue_message({"control": code})
+
+    async def _queue_message(self, message: dict):
+        assert isinstance(self._request, Request)
+        if await self._request.is_disconnected():
+            raise ClientDisconnect
+        await self._queue.put(message)
 
 
 class PersistentChat(Chat):

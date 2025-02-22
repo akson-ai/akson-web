@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.event import ServerSentEvent
 from sse_starlette.sse import EventSourceResponse
+from starlette.requests import ClientDisconnect
 
 import registry
 from framework import Assistant, PersistentChat
@@ -61,6 +62,7 @@ async def get_assistants():
     return list({"name": name} for name in assistants.keys())
 
 
+# TODO save all chat state, not only messages
 @app.get("/history/{chat_id}")
 async def get_history(chat: PersistentChat = Depends(get_chat)):
     """Return the history of a chat session."""
@@ -95,6 +97,8 @@ async def handle_message(
     chat._request = request
     try:
         await assistant.run(chat)
+    except ClientDisconnect:
+        logger.info("Client disconnected")
     finally:
         chat._request = None
         chat.save()
