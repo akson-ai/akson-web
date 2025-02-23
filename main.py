@@ -74,7 +74,7 @@ async def get_chat_state(state: ChatState = Depends(_get_chat_state)):
 
 
 @app.put("/{chat_id}/assistant")
-async def update_assistant(assistant: str = Body(...), chat: Chat = Depends(_get_chat)):
+async def set_assistant(assistant: str = Body(...), chat: Chat = Depends(_get_chat)):
     """Update the assistant for a chat session."""
     chat.state.assistant = assistant
     chat.state.save_to_disk()
@@ -85,7 +85,7 @@ def get_assistant(name: str = Body(alias="assistant")) -> Assistant:
 
 
 @app.post("/{chat_id}/message")
-async def handle_message(
+async def send_message(
     request: Request,
     content: str = Body(...),
     assistant: Assistant = Depends(get_assistant),
@@ -113,7 +113,7 @@ async def handle_message(
 
 
 @app.get("/{chat_id}/events")
-async def stream_events(chat: Chat = Depends(_get_chat)):
+async def get_events(chat: Chat = Depends(_get_chat)):
     """Stream events to the client."""
 
     async def generate_events():
