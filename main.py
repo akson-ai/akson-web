@@ -19,7 +19,7 @@ load_dotenv()
 
 assistants = load_assistants()
 # TODO find a way to make default assistant configurable
-default_assistant = "chatgpt"
+default_assistant = "assistant"
 
 for name, assistant in assistants.items():
     registry.register(name, assistant)
