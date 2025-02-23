@@ -82,7 +82,7 @@ class ChatState(BaseModel):
     def save_to_disk(self):
         os.makedirs("chats", exist_ok=True)
         with open(self.file_path(self.id), "w") as f:
-            f.write(self.model_dump_json())
+            f.write(self.model_dump_json(indent=2))
 
     @staticmethod
     def file_path(id: str):
