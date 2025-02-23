@@ -89,6 +89,7 @@ class ChatState(BaseModel):
         return os.path.join("chats", f"{id}.json")
 
 
+# TODO add send_image method to Chat
 class Chat:
     """
     Chat holds state and handles sending and receiving messages.
