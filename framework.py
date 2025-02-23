@@ -216,6 +216,7 @@ class SimpleAssistant(Assistant):
                     case RefusalDeltaEvent():
                         await chat.add_chunk(event.delta)
                     case FunctionToolCallArgumentsDeltaEvent():
+                        # TODO write the name of the tool before the arguments
                         await chat.add_chunk(event.arguments_delta)
                     case ChunkEvent() if event.chunk.choices[0].finish_reason:
                         await chat.end_message()
