@@ -140,6 +140,7 @@ function ChatApp() {
                 method: 'PUT',
                 body: assistant,
               });
+              document.getElementById('messageInput').focus();
             }}
           >
             {assistants.map(assistant => (
@@ -156,6 +157,7 @@ function ChatApp() {
             </div>
             <div className="flex space-x-2">
               <input
+                id="messageInput"
                 type="text"
                 className="input input-bordered flex-1"
                 placeholder="Type your message..."
