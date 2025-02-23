@@ -8,8 +8,6 @@ authors = [
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.12"
-# TODO add exa assistant
-# TODO add perplexity assistant
 dependencies = [
     "pydantic>=2.9.2",
     "openai>=1.63.2",
