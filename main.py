@@ -53,12 +53,14 @@ app = FastAPI()
 @app.get("/", include_in_schema=False)
 async def index():
     """Redirect to the chat app."""
-    return RedirectResponse(f"/chat?id={uuid.uuid4()}")
+    return RedirectResponse(f"/chat")
 
 
 @app.get("/chat", include_in_schema=False)
-async def get_chat_app():
+async def get_chat_app(id: str | None = None):
     """Serve the chat web app."""
+    if not id:
+        return RedirectResponse(f"/chat?id={uuid.uuid4()}")
     return FileResponse("web/chat.html")
 
 
