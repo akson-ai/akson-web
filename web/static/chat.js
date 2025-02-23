@@ -17,7 +17,6 @@ function ChatApp() {
   const urlParams = new URLSearchParams(window.location.search);
   const chatId = urlParams.get('id');
 
-  // TODO save selected assistant
   // TODO add assistant name to assistant messages
   // TODO add avatar to messages
   // TODO allow deleting individual messages
@@ -134,7 +133,14 @@ function ChatApp() {
           <select
             className="select select-bordered"
             value={selectedAssistant}
-            onChange={(e) => setSelectedAssistant(e.target.value)}
+            onChange={(e) => {
+              const assistant = e.target.value;
+              setSelectedAssistant(assistant);
+              fetch(`/${chatId}/assistant`, {
+                method: 'PUT',
+                body: assistant,
+              });
+            }}
           >
             {assistants.map(assistant => (
               <option key={assistant.name} value={assistant.name}>

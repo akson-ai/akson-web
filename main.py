@@ -73,6 +73,13 @@ async def get_chat_state(state: ChatState = Depends(_get_chat_state)):
     return state
 
 
+@app.put("/{chat_id}/assistant")
+async def update_assistant(assistant: str = Body(...), chat: Chat = Depends(_get_chat)):
+    """Update the assistant for a chat session."""
+    chat.state.assistant = assistant
+    chat.state.save_to_disk()
+
+
 def get_assistant(name: str = Body(alias="assistant")) -> Assistant:
     return assistants[name]
 
