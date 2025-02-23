@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from fastapi import Body, Depends, FastAPI, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from sse_starlette.event import ServerSentEvent
 from sse_starlette.sse import EventSourceResponse
 from starlette.requests import ClientDisconnect
@@ -61,10 +62,17 @@ async def get_chat_app():
     return FileResponse("web/chat.html")
 
 
-@app.get("/assistants", response_model=list[str])
+class AssistantModel(BaseModel):
+    name: str
+
+    class Config:
+        title = "Assistant"
+
+
+@app.get("/assistants", response_model=list[AssistantModel])
 async def get_assistants():
     """Return a list of available assistants."""
-    return list({"name": name} for name in sorted(assistants.keys()))
+    return list(AssistantModel(name=name) for name in sorted(assistants.keys()))
 
 
 @app.get("/{chat_id}/state", response_model=ChatState)
@@ -80,24 +88,28 @@ async def set_assistant(assistant: str = Body(...), chat: Chat = Depends(_get_ch
     chat.state.save_to_disk()
 
 
-def _get_assistant(assistant: str = Body(...)) -> Assistant:
-    return assistants[assistant]
+class MessageRequest(BaseModel):
+    content: str = Body(...)
+    assistant: str = Body(...)
+
+
+def _get_assistant(message: MessageRequest) -> Assistant:
+    return assistants[message.assistant]
 
 
 @app.post("/{chat_id}/message")
 async def send_message(
     request: Request,
-    content: str = Body(...),
+    message: MessageRequest,
     assistant: Assistant = Depends(_get_assistant),
     chat: Chat = Depends(_get_chat),
 ):
     """Handle a message from the client."""
-
-    chat.state.messages.append({"role": "user", "content": content})
+    chat.state.messages.append({"role": "user", "content": message.content})
 
     chat._request = request
     try:
-        if content.strip() == "/clear":
+        if message.content.strip() == "/clear":
             chat.state.messages.clear()
             chat.state.save_to_disk()
             logger.info("Chat cleared")
