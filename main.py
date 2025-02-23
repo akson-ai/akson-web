@@ -61,13 +61,13 @@ async def get_chat_app():
     return FileResponse("web/chat.html")
 
 
-@app.get("/assistants")
+@app.get("/assistants", response_model=list[str])
 async def get_assistants():
     """Return a list of available assistants."""
     return list({"name": name} for name in sorted(assistants.keys()))
 
 
-@app.get("/{chat_id}/state")
+@app.get("/{chat_id}/state", response_model=ChatState)
 async def get_chat_state(state: ChatState = Depends(_get_chat_state)):
     """Return the state of a chat session."""
     return state
@@ -80,15 +80,15 @@ async def set_assistant(assistant: str = Body(...), chat: Chat = Depends(_get_ch
     chat.state.save_to_disk()
 
 
-def get_assistant(name: str = Body(alias="assistant")) -> Assistant:
-    return assistants[name]
+def _get_assistant(assistant: str = Body(...)) -> Assistant:
+    return assistants[assistant]
 
 
 @app.post("/{chat_id}/message")
 async def send_message(
     request: Request,
     content: str = Body(...),
-    assistant: Assistant = Depends(get_assistant),
+    assistant: Assistant = Depends(_get_assistant),
     chat: Chat = Depends(_get_chat),
 ):
     """Handle a message from the client."""
@@ -114,7 +114,7 @@ async def send_message(
 
 @app.get("/{chat_id}/events")
 async def get_events(chat: Chat = Depends(_get_chat)):
-    """Stream events to the client."""
+    """Stream events to the client over SSE."""
 
     async def generate_events():
         while True:
