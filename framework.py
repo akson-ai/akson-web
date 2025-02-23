@@ -1,6 +1,7 @@
 import asyncio
 import os
 from abc import ABC, abstractmethod
+from datetime import date
 from typing import Any, Callable, Iterator, Literal, Sequence, TypedDict
 
 from fastapi import Request
@@ -163,6 +164,8 @@ class SimpleAssistant(Assistant):
 
     def __init__(self, system_prompt: str, functions: list[Callable] = []):
         self.system_prompt = system_prompt
+        # TODO make date dynamic
+        self.system_prompt += "\n\n Today's date is: " + str(date.today())
         self._client = AsyncAzureOpenAI()
         self._toolset = Toolset(self, functions)
 
