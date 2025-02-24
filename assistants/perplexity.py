@@ -20,8 +20,13 @@ class Perplexity(Assistant):
             "messages": chat.state.messages,
         }
         response = requests.request("POST", url, json=payload, headers=headers)
-        data = response.json()
+        try:
+            response.raise_for_status()
+        except Exception:
+            print(response.text)
+            raise
 
+        data = response.json()
         message = data["choices"][0]["message"]
         assert message["role"] == "assistant"
         await chat.add_message(message["content"])
