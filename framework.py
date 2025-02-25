@@ -1,7 +1,8 @@
 import asyncio
 import os
+import time
 from abc import ABC, abstractmethod
-from datetime import date
+from datetime import datetime
 from typing import Any, Callable, Literal, Sequence, TypedDict
 
 from fastapi import Request
@@ -166,8 +167,6 @@ class SimpleAssistant(Assistant):
     def __init__(self, name: str, system_prompt: str, functions: list[Callable] = []):
         self._name = name
         self.system_prompt = system_prompt
-        # TODO make date dynamic, add time and day of week
-        self.system_prompt += "\n\n Today's date is: " + str(date.today())
         self._client = AsyncAzureOpenAI()
         self._toolset = Toolset(self, functions)
 
@@ -195,13 +194,18 @@ class SimpleAssistant(Assistant):
 
     def _get_openai_messages(self, chat: Chat) -> list[ChatCompletionMessageParam]:
         messages: Sequence[ChatCompletionMessageParam] = []
-        messages.append(ChatCompletionSystemMessageParam(role="system", content=self.system_prompt))
+        messages.append(ChatCompletionSystemMessageParam(role="system", content=self._get_system_prompt()))
         for message in chat.state.messages:
             if message["role"] == "user":
                 messages.append(ChatCompletionUserMessageParam(role="user", content=message["content"]))
             elif message["role"] == "assistant":
                 messages.append(ChatCompletionAssistantMessageParam(role="assistant", content=message["content"]))
         return messages
+
+    def _get_system_prompt(self) -> str:
+        t = datetime.now().strftime("%A, %B %d, %Y at %I:%M:%S %p")
+        o = time.strftime("%z")  # Timezone offset
+        return f"{self.system_prompt}\n\nToday's date and time is {t} ({o})."
 
     async def _complete(self, messages: list[ChatCompletionMessageParam], chat: Chat) -> ParsedChatCompletionMessage:
         logger.info("Completing chat")
