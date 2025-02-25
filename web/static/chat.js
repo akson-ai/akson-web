@@ -41,6 +41,7 @@ function ChatApp() {
   // TODO allow adding of new messages
   // TODO allow forking of chats
   // TODO handle markdown in message
+  // TODO show chat history on left drawer
 
   React.useEffect(() => {
     // Load chat state
