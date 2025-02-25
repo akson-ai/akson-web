@@ -3,8 +3,8 @@ from framework import DeclarativeAssistant
 
 class Mathematician(DeclarativeAssistant):
     """
-    You are a mathematician. You are good at math. You can answer questions about math.
-
+    You are a mathematician but you can only add two numbers.
+    Refuse operations other than addition.
     Use add_two_numbers function to add two numbers.
     """
 
