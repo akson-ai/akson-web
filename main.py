@@ -15,8 +15,6 @@ from framework import Assistant, Chat, ChatState, Message
 from loader import load_assistants
 from logger import logger
 
-# TODO add Claude assistant
-
 load_dotenv()
 
 assistants = {assistant.name: assistant for assistant in load_assistants().values()}

@@ -207,9 +207,15 @@ class SimpleAssistant(Assistant):
             if message.get("category"):
                 continue
             if message["role"] == "user":
-                messages.append(ChatCompletionUserMessageParam(role="user", content=message["content"]))
+                messages.append(
+                    ChatCompletionUserMessageParam(role="user", name=message["name"], content=message["content"])
+                )
             elif message["role"] == "assistant":
-                messages.append(ChatCompletionAssistantMessageParam(role="assistant", content=message["content"]))
+                messages.append(
+                    ChatCompletionAssistantMessageParam(
+                        role="assistant", name=message["name"], content=message["content"]
+                    )
+                )
         return messages
 
     def _get_system_prompt(self) -> str:
