@@ -3,10 +3,10 @@ import os
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Callable, Literal, Sequence, TypedDict
+from typing import Any, Callable, Literal, NotRequired, Optional, Sequence, TypedDict
 
 from fastapi import Request
-from openai import AsyncAzureOpenAI
+from openai import AsyncOpenAI
 from openai.lib.streaming.chat import (
     ChunkEvent,
     ContentDeltaEvent,
@@ -52,12 +52,19 @@ from logger import logger
 #         """Sends a message to the agent. Agents should remember previous messages."""
 
 
+MessageCategory = Literal["info", "success", "warning", "error"]
+
+
 class Message(TypedDict):
     """Messages that are inside a chat."""
 
     role: Literal["user", "assistant"]
     name: str
     content: str
+    # Messages with category are for displaying special messages to the user.
+    # They should not be sent to the completion API.
+    # They get filtered out from Chat.state.messages list provided to the Assistant.run().
+    category: NotRequired[Optional[MessageCategory]]
     # TODO add id to Message
 
 
@@ -113,20 +120,21 @@ class Chat:
     # TODO implement Chat.add_image method
     async def add_image(self): ...
 
-    async def add_message(self, content: str):
+    async def add_message(self, content: str, category: Optional[MessageCategory] = None):
         assert isinstance(self._assistant, Assistant)
-        message = Message(role="assistant", name=self._assistant.name, content=content)
+        message = Message(role="assistant", name=self._assistant.name, content=content, category=category)
         return await self._add_message(message)
 
     async def _add_message(self, message: Message):
-        await self.begin_message()
+        await self.begin_message(message.get("category"))
         await self.add_chunk(message["content"])
         await self.end_message()
 
-    async def begin_message(self):
+    async def begin_message(self, category: Optional[MessageCategory] = None):
         self._chunks = []
+        self._message_category: Optional[MessageCategory] = category
         assert isinstance(self._assistant, Assistant)
-        await self._queue_message({"type": "begin_message", "name": self._assistant.name})
+        await self._queue_message({"type": "begin_message", "name": self._assistant.name, "category": category})
 
     async def add_chunk(self, chunk: str):
         self._chunks.append(chunk)
@@ -135,7 +143,7 @@ class Chat:
     async def end_message(self):
         assert isinstance(self._assistant, Assistant)
         content = "".join(self._chunks)
-        message = Message(role="assistant", name=self._assistant.name, content=content)
+        message = Message(role="assistant", name=self._assistant.name, content=content, category=self._message_category)
         self.state.messages.append(message)
 
     async def _queue_message(self, message: dict):
@@ -167,7 +175,7 @@ class SimpleAssistant(Assistant):
     def __init__(self, name: str, system_prompt: str, functions: list[Callable] = []):
         self._name = name
         self.system_prompt = system_prompt
-        self._client = AsyncAzureOpenAI()
+        self._client = AsyncOpenAI()
         self._toolset = Toolset(self, functions)
 
     @property
@@ -196,6 +204,8 @@ class SimpleAssistant(Assistant):
         messages: Sequence[ChatCompletionMessageParam] = []
         messages.append(ChatCompletionSystemMessageParam(role="system", content=self._get_system_prompt()))
         for message in chat.state.messages:
+            if message.get("category"):
+                continue
             if message["role"] == "user":
                 messages.append(ChatCompletionUserMessageParam(role="user", content=message["content"]))
             elif message["role"] == "assistant":
@@ -212,25 +222,37 @@ class SimpleAssistant(Assistant):
         for message in messages:
             logger.debug(message)
 
-        await chat.begin_message()
+        # Because we're streaming, we need to track whether a message has started or not.
+        message_started = False
 
         async with self._client.beta.chat.completions.stream(
-            model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
+            model=os.environ["OPENAI_MODEL"],
             messages=messages,
             **self._tool_kwargs(),
         ) as stream:
             async for event in stream:
                 match event:  # https://github.com/openai/openai-python/blob/main/helpers.md#chat-completions-events
                     case ContentDeltaEvent():
+                        if not message_started:
+                            message_started = True
+                            await chat.begin_message()
                         await chat.add_chunk(event.delta)
                     case RefusalDeltaEvent():
+                        if not message_started:
+                            message_started = True
+                            await chat.begin_message()
                         await chat.add_chunk(event.delta)
                     case FunctionToolCallArgumentsDeltaEvent():
-                        # TODO write the name of the tool before the arguments
+                        if not message_started:
+                            message_started = True
+                            await chat.begin_message(category="info")
+                            await chat.add_chunk(f"Calling function: {event.name}(")
                         await chat.add_chunk(event.arguments_delta)
                     case ChunkEvent() if event.chunk.choices[0].finish_reason:
-                        await chat.end_message()
                         choice = event.snapshot.choices[0]
+                        if choice.finish_reason == "tool_calls":
+                            await chat.add_chunk(")")
+                        await chat.end_message()
                         if choice.finish_reason in ("stop", "tool_calls"):
                             return choice.message
                         raise NotImplementedError(f"finish_reason={choice.finish_reason}")
@@ -305,7 +327,7 @@ class DeclarativeAssistant(SimpleAssistant):
 #     def run(self, chat: Chat) -> object:
 #         """Run the system prompt on chat and return the parsed response."""
 #         response = self._client.beta.chat.completions.parse(
-#             model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
+#             model=os.environ["OPENAI_MODEL"],
 #             response_format=self.response_format,
 #             messages=self._chat.messages + chat.messages,
 #         )

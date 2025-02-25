@@ -1,4 +1,4 @@
-function ChatMessage({ role, name, content }) {
+function ChatMessage({ role, name, content, category }) {
   return (
     <div className={`chat ${role === 'user' ? 'chat-end' : 'chat-start'}`}>
       <div className="chat-image avatar">
@@ -11,7 +11,7 @@ function ChatMessage({ role, name, content }) {
       <div className="chat-header">
         <time className="text-xs opacity-50">{name}</time>
       </div>
-      <div className="chat-bubble whitespace-pre-wrap">
+      <div className={`chat-bubble ${category ? `chat-bubble-${category}` : ''} whitespace-pre-wrap`}>
         {!content ? (
           <div className="flex items-center">
             <div className="loading loading-spinner loading-sm mr-2"></div>
@@ -52,6 +52,7 @@ function ChatApp() {
           role: msg.role,
           name: msg.name,
           content: msg.content,
+          category: msg.category,
         })));
       });
 
@@ -72,7 +73,7 @@ function ChatApp() {
       console.log(data)
 
       if (data.type === 'begin_message') {
-        setMessages(prev => [...prev, { role: data.role, name: data.name, content: '' }]);
+        setMessages(prev => [...prev, { role: data.role, name: data.name, content: '', category: data.category }]);
       } else if (data.type === 'clear') {
         setMessages([]);
       } else if (data.type === 'add_chunk') {
@@ -139,7 +140,7 @@ function ChatApp() {
     <div className="flex flex-col max-w-prose mx-auto h-screen">
       <div id="chatHistory" className="p-4 overflow-y-auto" ref={chatHistoryRef}>
         {messages.map((msg, index) => (
-          <ChatMessage key={index} role={msg.role} content={msg.content} name={msg.name} />
+          <ChatMessage key={index} role={msg.role} content={msg.content} name={msg.name} category={msg.category} />
         ))}
       </div>
       <div id="chatControls" className="flex flex-col mt-auto p-4 space-y-2">
