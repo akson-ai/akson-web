@@ -1,7 +1,16 @@
-function ChatMessage({ sender, text }) {
+function ChatMessage({ role, name, content }) {
   return (
-    <div className={`chat ${sender === 'user' ? 'chat-end' : 'chat-start'}`}>
-      <div className="chat-bubble">{text}</div>
+    <div className={`chat ${role === 'user' ? 'chat-end' : 'chat-start'}`}>
+      <div className="chat-image avatar">
+        <div className="w-10 rounded-full">
+          {/* TODO change avatar URL */}
+          <img src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" />
+        </div>
+      </div>
+      <div className="chat-header">
+        <time className="text-xs opacity-50">{name}</time>
+      </div>
+      <div className="chat-bubble">{content}</div>
     </div>
   );
 }
@@ -23,6 +32,8 @@ function ChatApp() {
   // TODO allow editing of messages
   // TODO allow adding of new messages
   // TODO allow forking of chats
+  // TODO handle newlines in message
+  // TODO handle markdown in message
 
   React.useEffect(() => {
     // Load chat state
@@ -31,8 +42,9 @@ function ChatApp() {
       .then((state) => {
         setSelectedAssistant(state.assistant);
         setMessages(state.messages.map(msg => ({
-          sender: msg.role,
-          text: msg.content
+          role: msg.role,
+          name: msg.name,
+          content: msg.content
         })));
       });
 
@@ -52,18 +64,16 @@ function ChatApp() {
       const data = JSON.parse(event.data);
       console.log(data)
 
-      if (data.control === 'new_message') {
-        // Create a new empty message when receiving control event
-        setMessages(prev => [...prev, { sender: 'assistant', text: '' }]);
-      } else if (data.control === 'clear') {
-        // Create a new empty message when receiving control event
+      if (data.type === 'begin_message') {
+        setMessages(prev => [...prev, { role: data.role, name: data.name, content: '' }]);
+      } else if (data.type === 'clear') {
         setMessages([]);
-      } else if (data.chunk) {
+      } else if (data.type === 'add_chunk') {
         // Append chunk to the last message
         setMessages(prev => {
           const newMessages = [...prev];
           const lastMessage = newMessages[newMessages.length - 1];
-          lastMessage.text += data.chunk;
+          lastMessage.content += data.chunk;
           return newMessages;
         });
       }
@@ -94,7 +104,7 @@ function ChatApp() {
   const sendMessage = () => {
     if (!inputText.trim()) return;
 
-    setMessages(prev => [...prev, { sender: 'user', text: inputText }]);
+    setMessages(prev => [...prev, { role: 'user', name: 'You', content: inputText }]);
 
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
@@ -122,7 +132,7 @@ function ChatApp() {
     <div className="flex flex-col max-w-prose mx-auto h-screen">
       <div id="chatHistory" className="p-4 overflow-y-auto" ref={chatHistoryRef}>
         {messages.map((msg, index) => (
-          <ChatMessage key={index} sender={msg.sender} text={msg.text} />
+          <ChatMessage key={index} role={msg.role} content={msg.content} name={msg.name} />
         ))}
       </div>
       <div id="chatControls" className="flex flex-col mt-auto p-4 space-y-2">

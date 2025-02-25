@@ -1,3 +1,3 @@
 from framework import SimpleAssistant
 
-chatgpt = SimpleAssistant("You are ChatGPT")
+chatgpt = SimpleAssistant(name="ChatGPT", system_prompt="You are ChatGPT")

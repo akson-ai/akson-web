@@ -2,7 +2,7 @@ import asyncio
 import os
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import Any, Callable, Iterator, Literal, Sequence, TypedDict
+from typing import Any, Callable, Literal, Sequence, TypedDict
 
 from fastapi import Request
 from openai import AsyncAzureOpenAI
@@ -55,6 +55,7 @@ class Message(TypedDict):
     """Messages that are inside a chat."""
 
     role: Literal["user", "assistant"]
+    name: str
     content: str
     # TODO add id to Message
 
@@ -90,7 +91,6 @@ class ChatState(BaseModel):
         return os.path.join("chats", f"{id}.json")
 
 
-# TODO add send_image method to Chat
 class Chat:
     """
     Chat holds state and handles sending and receiving messages.
@@ -99,46 +99,43 @@ class Chat:
     """
 
     def __init__(self, state: ChatState):
+        # State is the chat that is persisted to disk.
         self.state = state
-        self._request: Request | None
+
+        # Message that are put here will be sent over SSE by the web server.
         self._queue = asyncio.Queue()
 
-    async def add_message(self, message: str | Iterator[str]):
-        await self._queue_message({"control": "new_message"})
+        # These will be set by the request handler before passing the Chat to the Assistant.run().
+        self._request: Request | None
+        self._assistant: Assistant | None
 
-        if isinstance(message, str):
-            stream = [message]
-        else:
-            stream = message
+    # TODO implement Chat.add_image method
+    async def add_image(self): ...
 
-        chunks = []
-        for chunk in stream:
-            chunks.append(chunk)
-            await self._queue_message({"chunk": chunk})
+    async def add_message(self, content: str):
+        assert isinstance(self._assistant, Assistant)
+        message = Message(role="assistant", name=self._assistant.name, content=content)
+        return await self._add_message(message)
 
-            assert isinstance(self._request, Request)
-            if await self._request.is_disconnected():
-                logger.info("Client disconnected, stopping streaming")
-                break
-
-        self.state.messages.append({"role": "assistant", "content": "".join(chunks)})
+    async def _add_message(self, message: Message):
+        await self.begin_message()
+        await self.add_chunk(message["content"])
+        await self.end_message()
 
     async def begin_message(self):
-        self._current_message = []
-        await self._queue_message({"control": "new_message"})
+        self._chunks = []
+        assert isinstance(self._assistant, Assistant)
+        await self._queue_message({"type": "begin_message", "name": self._assistant.name})
 
     async def add_chunk(self, chunk: str):
-        self._current_message.append(chunk)
-        await self._queue_message({"chunk": chunk})
+        self._chunks.append(chunk)
+        await self._queue_message({"type": "add_chunk", "chunk": chunk})
 
-    async def end_message(self) -> str:
-        message = "".join(self._current_message)
-        self.state.messages.append({"role": "assistant", "content": message})
-        await self._queue_message({"control": "end_message"})
-        return message
-
-    async def _send_control(self, code: str):
-        await self._queue_message({"control": code})
+    async def end_message(self):
+        assert isinstance(self._assistant, Assistant)
+        content = "".join(self._chunks)
+        message = Message(role="assistant", name=self._assistant.name, content=content)
+        self.state.messages.append(message)
 
     async def _queue_message(self, message: dict):
         assert isinstance(self._request, Request)
@@ -150,10 +147,14 @@ class Chat:
 class Assistant(ABC):
     """Assistants are used to generate responses to chats."""
 
-    # TODO set assistant's name and description
+    def __repr__(self):
+        return f"Assistant<{self.name}>"
 
-    # def __repr__(self):
-    #     return f"Assistant<{self.name}>"
+    @property
+    def name(self) -> str:
+        return self.__class__.__name__
+
+    # TODO add description method to Assistant
 
     @abstractmethod
     async def run(self, chat: Chat) -> None: ...
@@ -162,12 +163,17 @@ class Assistant(ABC):
 class SimpleAssistant(Assistant):
     """Simple assistant that uses OpenAI's chat API to generate responses."""
 
-    def __init__(self, system_prompt: str, functions: list[Callable] = []):
+    def __init__(self, name: str, system_prompt: str, functions: list[Callable] = []):
+        self._name = name
         self.system_prompt = system_prompt
-        # TODO make date dynamic
+        # TODO make date dynamic, add time and day of week
         self.system_prompt += "\n\n Today's date is: " + str(date.today())
         self._client = AsyncAzureOpenAI()
         self._toolset = Toolset(self, functions)
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     async def run(self, chat: Chat) -> None:
         logger.debug(f"Completing chat...\nLast message: {chat.state.messages[-1]}")
@@ -268,9 +274,10 @@ class DeclarativeAssistant(SimpleAssistant):
     """
 
     def __init__(self):
+        name = self.__class__.__name__
         prompt = self.__doc__ or ""
         functions = [getattr(self, name) for name, func in self.__class__.__dict__.items() if callable(func)]
-        super().__init__(prompt, functions)
+        super().__init__(name, prompt, functions)
 
 
 # class StructuredOutput:
@@ -355,7 +362,7 @@ if __name__ == "__main__":
             return a + b
 
     chat = Chat(state=ChatState.create_new("id", "assistant"))
-    chat.state.messages.append({"role": "user", "content": "What is three plus one?"})
+    chat.state.messages.append({"role": "user", "name": "user", "content": "What is three plus one?"})
 
     mathematician = Mathematician()
     message = mathematician.run(chat)

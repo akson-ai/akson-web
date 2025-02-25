@@ -11,13 +11,22 @@ from sse_starlette.sse import EventSourceResponse
 from starlette.requests import ClientDisconnect
 
 import registry
-from framework import Assistant, Chat, ChatState
+from framework import Assistant, Chat, ChatState, Message
 from loader import load_assistants
 from logger import logger
 
 load_dotenv()
 
 assistants = load_assistants()
+
+assistants_by_name: dict[str, Assistant] = {}
+for assistant in assistants.values():
+    assistants_by_name[assistant.name] = assistant
+
+
+assistants = assistants_by_name
+
+
 # TODO find a way to make default assistant configurable
 default_assistant = "assistant"
 
@@ -74,7 +83,8 @@ class AssistantModel(BaseModel):
 @app.get("/assistants", response_model=list[AssistantModel])
 async def get_assistants():
     """Return a list of available assistants."""
-    return list(AssistantModel(name=name) for name in sorted(assistants.keys()))
+    # TODO sort assistants by name
+    return list(AssistantModel(name=assistant.name) for assistant in assistants.values())
 
 
 @app.get("/{chat_id}/state", response_model=ChatState)
@@ -107,22 +117,26 @@ async def send_message(
     chat: Chat = Depends(_get_chat),
 ):
     """Handle a message from the client."""
-    chat.state.messages.append({"role": "user", "content": message.content})
-
     chat._request = request
+    chat._assistant = assistant
     try:
         if message.content.strip() == "/clear":
             chat.state.messages.clear()
             chat.state.save_to_disk()
             logger.info("Chat cleared")
-            await chat._send_control("clear")
+            await chat._queue_message({"type": "clear"})
             return
+
+        user_message = Message(role="user", name="You", content=message.content)
+        chat.state.messages.append(user_message)
+
         await assistant.run(chat)
     except ClientDisconnect:
         # TODO save interrupted messages
         logger.info("Client disconnected")
     finally:
         chat._request = None
+        chat._assistant = None
         chat.state.save_to_disk()
 
 
