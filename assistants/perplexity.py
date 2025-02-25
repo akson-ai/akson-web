@@ -16,6 +16,8 @@ class Perplexity(Assistant):
             "Content-Type": "application/json",
         }
         payload = {
+            # TODO add sonar-deep-research model option
+            # https://docs.perplexity.ai/guides/model-cards
             "model": "sonar",
             "messages": self._get_messages(chat),
         }
