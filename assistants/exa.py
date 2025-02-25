@@ -1,13 +1,13 @@
 import os
 
-from exa_py import Exa
+from exa_py import Exa as ExaClient
 
 from framework import DeclarativeAssistant
 
-client = Exa(os.environ["EXA_API_KEY"])
+client = ExaClient(os.environ["EXA_API_KEY"])
 
 
-class ExaAssistant(DeclarativeAssistant):
+class Exa(DeclarativeAssistant):
     """
     You are Exa assistant.
 
@@ -83,4 +83,4 @@ class ExaAssistant(DeclarativeAssistant):
         return str(results)
 
 
-exa = ExaAssistant()
+exa = Exa()
