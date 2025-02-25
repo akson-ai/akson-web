@@ -17,6 +17,9 @@ from logger import logger
 
 # TODO write an email assistant
 # TODO think about how to convert assistants to agents
+# TODO add Replier assistant
+# TODO add Rewriter assistant
+# TODO add more use case items
 
 load_dotenv()
 
