@@ -83,8 +83,7 @@ class AssistantModel(BaseModel):
 @app.get("/assistants", response_model=list[AssistantModel])
 async def get_assistants():
     """Return a list of available assistants."""
-    # TODO sort assistants by name
-    return list(AssistantModel(name=assistant.name) for assistant in assistants.values())
+    return [AssistantModel(name=assistant.name) for assistant in sorted(assistants.values(), key=lambda a: a.name)]
 
 
 @app.get("/{chat_id}/state", response_model=ChatState)
