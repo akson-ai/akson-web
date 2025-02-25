@@ -15,6 +15,9 @@ from framework import Assistant, Chat, ChatState, Message
 from loader import load_assistants
 from logger import logger
 
+# TODO write an email assistant
+# TODO think about how to convert assistants to agents
+
 load_dotenv()
 
 assistants = {assistant.name: assistant for assistant in load_assistants().values()}
