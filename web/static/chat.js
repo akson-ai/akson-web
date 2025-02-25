@@ -11,7 +11,7 @@ function ChatMessage({ role, name, content }) {
       <div className="chat-header">
         <time className="text-xs opacity-50">{name}</time>
       </div>
-      <div className="chat-bubble">{content}</div>
+      <div className="chat-bubble whitespace-pre-wrap">{content}</div>
     </div>
   );
 }
@@ -31,7 +31,6 @@ function ChatApp() {
   // TODO allow editing of messages
   // TODO allow adding of new messages
   // TODO allow forking of chats
-  // TODO handle newlines in message
   // TODO handle markdown in message
 
   React.useEffect(() => {
