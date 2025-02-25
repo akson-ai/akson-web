@@ -11,7 +11,16 @@ function ChatMessage({ role, name, content }) {
       <div className="chat-header">
         <time className="text-xs opacity-50">{name}</time>
       </div>
-      <div className="chat-bubble whitespace-pre-wrap">{content}</div>
+      <div className="chat-bubble whitespace-pre-wrap">
+        {!content ? (
+          <div className="flex items-center">
+            <div className="loading loading-spinner loading-sm mr-2"></div>
+            <span>Thinking...</span>
+          </div>
+        ) : (
+          content
+        )}
+      </div>
     </div>
   );
 }
@@ -42,7 +51,7 @@ function ChatApp() {
         setMessages(state.messages.map(msg => ({
           role: msg.role,
           name: msg.name,
-          content: msg.content
+          content: msg.content,
         })));
       });
 
