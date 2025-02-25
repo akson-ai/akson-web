@@ -2,9 +2,10 @@ function ChatMessage({ role, name, content }) {
   return (
     <div className={`chat ${role === 'user' ? 'chat-end' : 'chat-start'}`}>
       <div className="chat-image avatar">
-        <div className="w-10 rounded-full">
-          {/* TODO change avatar URL */}
-          <img src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" />
+        <div className="w-10 rounded-full bg-base-300 place-content-center">
+          <div className="text-2xl place-self-center">
+            {role === 'user' ? '👤' : '🤖'}
+          </div>
         </div>
       </div>
       <div className="chat-header">
