@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 
 from dotenv import load_dotenv
@@ -10,29 +11,15 @@ from sse_starlette.event import ServerSentEvent
 from sse_starlette.sse import EventSourceResponse
 from starlette.requests import ClientDisconnect
 
-import registry
 from framework import Assistant, Chat, ChatState, Message
 from loader import load_assistants
 from logger import logger
 
 load_dotenv()
 
-assistants = load_assistants()
+assistants = {assistant.name: assistant for assistant in load_assistants().values()}
 
-assistants_by_name: dict[str, Assistant] = {}
-for assistant in assistants.values():
-    assistants_by_name[assistant.name] = assistant
-
-
-assistants = assistants_by_name
-
-
-# TODO find a way to make default assistant configurable
-default_assistant = "assistant"
-
-for name, assistant in assistants.items():
-    registry.register(name, assistant)
-
+default_assistant = os.getenv("DEFAULT_ASSISTANT", "ChatGPT")
 
 # Need to keep a single instance of each chat in memory in order to do pub/sub on queue
 # TODO try streaming response
