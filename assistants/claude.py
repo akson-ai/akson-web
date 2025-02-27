@@ -53,7 +53,8 @@ class Claude(Assistant):
             async for chunk in stream:
                 match chunk:
                     case RawContentBlockDeltaEvent(delta=TextDelta()):
-                        await chat.add_chunk(chunk.delta.text)  # type: ignore
+                        assert isinstance(chunk.delta, TextDelta)
+                        await chat.add_chunk(chunk.delta.text)
                     case RawContentBlockStopEvent(content_block=TextBlock()):
                         await chat.end_message()
 
