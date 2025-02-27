@@ -13,6 +13,7 @@ from framework import Assistant, Chat
 from logger import logger
 
 
+# TODO add function calling to Claude assistant
 class Claude(Assistant):
     """Assistant that uses Anthropic's Claude API to generate responses."""
 
