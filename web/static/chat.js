@@ -25,6 +25,45 @@ function ChatMessage({ role, name, content, category }) {
   );
 }
 
+function Sidebar({ chatHistory, chatId, createNewChat, handleSelectChat }) {
+  return (
+    <div className="drawer-side">
+      {/* A dark overlay that covers the whole page when the drawer is open */}
+      <label htmlFor="drawer-toggle" className="drawer-overlay"></label>
+
+      {/* The sidebar content */}
+      <div className="bg-base-200 w-80 h-full flex flex-col">
+        <div className="p-4 border-b border-base-300">
+          <button className="btn btn-secondary w-full" onClick={createNewChat}>
+            New Chat
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-grow">
+          <ul className="menu p-4 w-full">
+            {chatHistory.map(chat => (
+              <li key={chat.id} className={chat.id === chatId ? "bordered" : ""}>
+                <a
+                  href={`/chat?id=${chat.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSelectChat(chat.id);
+                  }}
+                  className={chat.id === chatId ? "active" : ""}
+                >
+                  {chat.title || "Untitled Chat"}
+                  <span className="text-xs opacity-50 ml-2">
+                    {new Date(chat.last_updated).toLocaleDateString()}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ChatApp() {
   const [messages, setMessages] = React.useState([]);
   const [inputText, setInputText] = React.useState('');
@@ -237,40 +276,12 @@ function ChatApp() {
       </div> {/* End of main page content */}
 
       {/* Sidebar wrapper */}
-      <div className="drawer-side">
-        {/* A dark overlay that covers the whole page when the drawer is open */}
-        <label htmlFor="drawer-toggle" className="drawer-overlay"></label>
-
-        {/* The sidebar content */}
-        <div className="bg-base-200 w-80 h-full flex flex-col">
-          <div className="p-4 border-b border-base-300">
-            <button className="btn btn-secondary w-full" onClick={createNewChat} >
-              New Chat
-            </button>
-          </div>
-          <div className="overflow-y-auto flex-grow">
-            <ul className="menu p-4 w-full">
-              {chatHistory.map(chat => (
-                <li key={chat.id} className={chat.id === chatId ? "bordered" : ""}>
-                  <a
-                    href={`/chat?id=${chat.id}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleSelectChat(chat.id);
-                    }}
-                    className={chat.id === chatId ? "active" : ""}
-                  >
-                    {chat.title || "Untitled Chat"}
-                    <span className="text-xs opacity-50 ml-2">
-                      {new Date(chat.last_updated).toLocaleDateString()}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
+      <Sidebar
+        chatHistory={chatHistory}
+        chatId={chatId}
+        createNewChat={createNewChat}
+        handleSelectChat={handleSelectChat}
+      />
     </div>
   );
 }
