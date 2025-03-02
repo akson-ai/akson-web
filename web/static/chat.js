@@ -70,17 +70,29 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
 
 function Sidebar({ chatId }) {
   const [chatHistory, setChatHistory] = React.useState([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   const loadChatHistory = () => {
+    setIsLoading(true);
     fetch('/chats')
       .then((res) => res.json())
       .then((data) => {
         setChatHistory(data);
+        setIsLoading(false);
       })
       .catch(err => {
         console.error('Error loading chat history:', err);
+        setIsLoading(false);
       });
   };
+
+  // Filter chats based on search term
+  const filteredChats = searchTerm.trim()
+    ? chatHistory.filter(chat =>
+        chat.title.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : chatHistory;
 
   const handleSelectChat = (id) => {
     window.location.href = `/chat?id=${id}`;
@@ -92,26 +104,45 @@ function Sidebar({ chatId }) {
 
   return (
     <div className="bg-base-200 w-80 h-full flex flex-col">
+      <div className="p-4">
+        <input
+          type="text"
+          placeholder="Search chats..."
+          className="input input-bordered w-full"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
       <div className="overflow-y-auto flex-grow">
-        <ul className="menu p-4 w-full">
-          {chatHistory.map(chat => (
-            <li key={chat.id} className={chat.id === chatId ? "bordered" : ""}>
-              <a
-                href={`/chat?id=${chat.id}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleSelectChat(chat.id);
-                }}
-                className={chat.id === chatId ? "active" : ""}
-              >
-                {chat.title || "Untitled Chat"}
-                <span className="text-xs opacity-50 ml-2">
-                  {new Date(chat.last_updated).toLocaleDateString()}
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
+        {isLoading ? (
+          <div className="flex justify-center items-center p-4">
+            <div className="loading loading-spinner loading-md"></div>
+          </div>
+        ) : (
+          <ul className="menu p-4 w-full">
+            {filteredChats.length > 0 ? (
+              filteredChats.map(chat => (
+                <li key={chat.id} className={chat.id === chatId ? "bordered" : ""}>
+                  <a
+                    href={`/chat?id=${chat.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleSelectChat(chat.id);
+                    }}
+                    className={chat.id === chatId ? "active" : ""}
+                  >
+                    {chat.title}
+                    <span className="text-xs opacity-50 ml-2">
+                      {new Date(chat.last_updated).toLocaleDateString()}
+                    </span>
+                  </a>
+                </li>
+              ))
+            ) : (
+              <li className="text-center opacity-70">No chats found</li>
+            )}
+          </ul>
+        )}
       </div>
     </div>
   );
@@ -184,7 +215,7 @@ function ChatContent({ chatId, abortControllerRef }) {
     // Load chat state
     setIsLoading(true);
     setError(null);
-    
+
     fetch(`/${chatId}/state`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load chat state');
@@ -394,7 +425,7 @@ function ChatContent({ chatId, abortControllerRef }) {
             </div>
           </div>
         )}
-        
+
         <div id="chatHistory" className="p-4 overflow-y-auto flex-grow" ref={chatHistoryRef}>
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
@@ -533,7 +564,7 @@ function ChatApp() {
         <i className="fas fa-keyboard mr-1"></i>
         <span>⌘ + /</span>
       </div>
-      
+
       {/* Toast notification */}
       <div id="toast" className="toast toast-end hidden">
         <div className="alert alert-success">
