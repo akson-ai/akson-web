@@ -1,6 +1,7 @@
 import json
 import os
 import uuid
+from datetime import datetime
 
 from dotenv import load_dotenv
 from fastapi import Body, Depends, FastAPI, Request
@@ -22,6 +23,9 @@ from logger import logger
 # TODO add more use case items
 
 load_dotenv()
+
+# Ensure chats directory exists
+os.makedirs("chats", exist_ok=True)
 
 assistants = {assistant.name: assistant for assistant in load_assistants().values()}
 
@@ -77,6 +81,46 @@ class AssistantModel(BaseModel):
 async def get_assistants():
     """Return a list of available assistants."""
     return [AssistantModel(name=assistant.name) for assistant in sorted(assistants.values(), key=lambda a: a.name)]
+
+
+class ChatSummary(BaseModel):
+    id: str
+    title: str
+    last_updated: datetime
+
+
+@app.get("/chats", response_model=list[ChatSummary])
+async def get_chats():
+    """Return a list of all chat sessions."""
+    chat_files = []
+    for filename in os.listdir("chats"):
+        if filename.endswith(".json"):
+            chat_id = filename[:-5]  # Remove .json extension
+            try:
+                state = ChatState.load_from_disk(chat_id)
+                # Get the first few characters of the first message as the title
+                title = "Untitled Chat"
+                if state.messages and len(state.messages) > 0:
+                    first_message = state.messages[0]
+                    if first_message["role"] == "user" and first_message["content"]:
+                        title = first_message["content"][:30] + ("..." if len(first_message["content"]) > 30 else "")
+
+                # Get the last modified time of the file
+                last_updated = os.path.getmtime(ChatState.file_path(chat_id))
+
+                chat_files.append(
+                    ChatSummary(
+                        id=chat_id,
+                        title=title,
+                        last_updated=datetime.fromtimestamp(last_updated),
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Error loading chat {chat_id}: {e}")
+
+    # Sort by last updated, newest first
+    chat_files.sort(key=lambda x: x.last_updated, reverse=True)
+    return chat_files
 
 
 @app.get("/{chat_id}/state", response_model=ChatState)
