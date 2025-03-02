@@ -206,17 +206,10 @@ function ChatContent({ chatId, abortControllerRef }) {
 
   return (
     <>
-      <div className="navbar bg-base-300">
-        <div className="flex-none">
-          <label htmlFor="drawer-toggle" className="btn btn-square btn-ghost">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-6 h-6 stroke-current">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h18M9 8h12M9 12h12M9 16h12M3 20h18"></path>
-            </svg>
-          </label>
-        </div>
-        <div className="flex-1">
-          <span className="text-xl font-bold">Chat</span>
-        </div>
+      <div className="p-2">
+        <label htmlFor="drawer-toggle" className="btn btn-square btn-ghost">
+          <i className="fas fa-bars text-lg"></i>
+        </label>
       </div>
 
       <div className="flex flex-col max-w-prose mx-auto h-[calc(100vh-64px)] w-full">
