@@ -129,6 +129,7 @@ function ChatContent({ chatId, abortControllerRef }) {
   const [assistants, setAssistants] = React.useState([]);
   const [selectedAssistant, setSelectedAssistant] = React.useState('');
   const chatHistoryRef = React.useRef(null);
+  const messageInputRef = React.useRef(null);
 
   const createNewChat = () => {
     window.location.href = '/chat';
@@ -198,6 +199,25 @@ function ChatContent({ chatId, abortControllerRef }) {
     
     return () => {
       window.removeEventListener('keydown', handleNewChatShortcut);
+    };
+  }, []);
+
+  // Add a separate useEffect for the focus input shortcut
+  React.useEffect(() => {
+    const handleFocusInputShortcut = (e) => {
+      // Check for Shift+Esc
+      if (e.shiftKey && e.key === 'Escape') {
+        e.preventDefault();
+        if (messageInputRef.current) {
+          messageInputRef.current.focus();
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleFocusInputShortcut);
+    
+    return () => {
+      window.removeEventListener('keydown', handleFocusInputShortcut);
     };
   }, []);
 
@@ -289,6 +309,7 @@ function ChatContent({ chatId, abortControllerRef }) {
               <div className="flex space-x-2">
                 <input
                   id="messageInput"
+                  ref={messageInputRef}
                   type="text"
                   className="input input-bordered flex-1"
                   placeholder="Type your message..."
