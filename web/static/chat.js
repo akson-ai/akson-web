@@ -228,7 +228,18 @@ function ChatApp() {
     setInputText('');
   };
 
-  const chatContent = (
+function ChatContent({
+  messages,
+  inputText,
+  setInputText,
+  selectedAssistant,
+  setSelectedAssistant,
+  assistants,
+  chatId,
+  sendMessage,
+  chatHistoryRef
+}) {
+  return (
     <>
       <div className="navbar bg-base-300">
         <div className="flex-none">
@@ -298,6 +309,7 @@ function ChatApp() {
       </div>
     </>
   );
+}
 
   return (
     <Drawer
@@ -308,7 +320,17 @@ function ChatApp() {
       createNewChat={createNewChat}
       handleSelectChat={handleSelectChat}
     >
-      {chatContent}
+      <ChatContent
+        messages={messages}
+        inputText={inputText}
+        setInputText={setInputText}
+        selectedAssistant={selectedAssistant}
+        setSelectedAssistant={setSelectedAssistant}
+        assistants={assistants}
+        chatId={chatId}
+        sendMessage={sendMessage}
+        chatHistoryRef={chatHistoryRef}
+      />
     </Drawer>
   );
 }
