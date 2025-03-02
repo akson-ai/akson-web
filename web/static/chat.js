@@ -113,6 +113,10 @@ function ChatContent({ chatId, abortControllerRef }) {
   const [selectedAssistant, setSelectedAssistant] = React.useState('');
   const chatHistoryRef = React.useRef(null);
 
+  const createNewChat = () => {
+    window.location.href = '/chat';
+  };
+
   React.useEffect(() => {
     // Load chat state
     fetch(`/${chatId}/state`)
@@ -158,7 +162,26 @@ function ChatContent({ chatId, abortControllerRef }) {
       }
     };
 
-    return () => eventSource.close();
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  // Add a separate useEffect for the keyboard shortcut
+  React.useEffect(() => {
+    const handleNewChatShortcut = (e) => {
+      // Check for Cmd+Shift+O (Mac) or Ctrl+Shift+O (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'o') {
+        e.preventDefault();
+        createNewChat();
+      }
+    };
+    
+    window.addEventListener('keydown', handleNewChatShortcut);
+    
+    return () => {
+      window.removeEventListener('keydown', handleNewChatShortcut);
+    };
   }, []);
 
   React.useEffect(() => {
@@ -193,10 +216,6 @@ function ChatContent({ chatId, abortControllerRef }) {
     });
 
     setInputText('');
-  };
-
-  const createNewChat = () => {
-    window.location.href = '/chat';
   };
 
   return (
