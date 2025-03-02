@@ -202,12 +202,16 @@ function ChatContent({ chatId, abortControllerRef }) {
   return (
     <>
       <div className="p-2 flex justify-between items-center">
-        <label htmlFor="drawer-toggle" className="btn btn-square btn-ghost">
-          <i className="fas fa-clock-rotate-left text-lg"></i>
-        </label>
-        <button className="btn btn-square btn-ghost" onClick={createNewChat}>
-          <i className="fas fa-comment-medical"></i>
-        </button>
+        <div className="tooltip tooltip-right" data-tip="Chat history">
+          <label htmlFor="drawer-toggle" className="btn btn-square btn-ghost">
+            <i className="fas fa-clock-rotate-left text-lg"></i>
+          </label>
+        </div>
+        <div className="tooltip tooltip-left" data-tip="New chat">
+          <button className="btn btn-square btn-ghost" onClick={createNewChat}>
+            <i className="fas fa-comment-medical text-lg"></i>
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col max-w-prose mx-auto h-[calc(100vh-64px)] w-full">
@@ -258,7 +262,7 @@ function ChatContent({ chatId, abortControllerRef }) {
                   autoFocus
                 />
                 <button className="btn btn-primary" onClick={sendMessage}>
-                  <i className="fas fa-paper-plane"></i>
+                  <i className="fas fa-arrow-up"></i>
                 </button>
               </div>
             </label>
