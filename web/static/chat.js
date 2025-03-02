@@ -77,6 +77,23 @@ function Sidebar({ chatId }) {
 function Drawer({ children, chatId }) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
+  // Add useEffect for the sidebar toggle shortcut
+  React.useEffect(() => {
+    const handleSidebarShortcut = (e) => {
+      // Check for Cmd+Shift+S (Mac) or Ctrl+Shift+S (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 's') {
+        e.preventDefault();
+        setSidebarOpen(prevState => !prevState);
+      }
+    };
+    
+    window.addEventListener('keydown', handleSidebarShortcut);
+    
+    return () => {
+      window.removeEventListener('keydown', handleSidebarShortcut);
+    };
+  }, []);
+
   return (
     <div className="drawer"> {/* The root container */}
 
