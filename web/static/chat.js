@@ -320,6 +320,7 @@ function ChatApp() {
   // TODO allow adding of new messages
   // TODO allow forking of chats
   // TODO handle markdown in message
+  // TODO when new chat is persisted, reload chat history
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {
