@@ -208,7 +208,7 @@ function ChatContent({ chatId, abortControllerRef }) {
     <>
       <div className="p-2">
         <label htmlFor="drawer-toggle" className="btn btn-square btn-ghost">
-          <i className="fas fa-bars text-lg"></i>
+          <i className="fas fa-clock-rotate-left text-lg"></i>
         </label>
       </div>
 
@@ -259,7 +259,9 @@ function ChatContent({ chatId, abortControllerRef }) {
                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                   autoFocus
                 />
-                <button className="btn btn-primary" onClick={sendMessage}>&uarr;</button>
+                <button className="btn btn-primary" onClick={sendMessage}>
+                  <i className="fas fa-paper-plane"></i>
+                </button>
               </div>
             </label>
           </div>
