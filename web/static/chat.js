@@ -25,7 +25,32 @@ function ChatMessage({ role, name, content, category }) {
   );
 }
 
-function Sidebar({ chatHistory, chatId, createNewChat, handleSelectChat }) {
+function Sidebar({ chatId }) {
+  const [chatHistory, setChatHistory] = React.useState([]);
+
+  const loadChatHistory = () => {
+    fetch('/chats')
+      .then((res) => res.json())
+      .then((data) => {
+        setChatHistory(data);
+      })
+      .catch(err => {
+        console.error('Error loading chat history:', err);
+      });
+  };
+
+  const handleSelectChat = (id) => {
+    window.location.href = `/chat?id=${id}`;
+  };
+
+  const createNewChat = () => {
+    window.location.href = '/chat';
+  };
+
+  React.useEffect(() => {
+    loadChatHistory();
+  }, []);
+
   return (
     <div className="bg-base-200 w-80 h-full flex flex-col">
       <div className="p-4 border-b border-base-300">
@@ -58,7 +83,9 @@ function Sidebar({ chatHistory, chatId, createNewChat, handleSelectChat }) {
   );
 }
 
-function Drawer({ children, sidebarOpen, setSidebarOpen, chatHistory, chatId, createNewChat, handleSelectChat }) {
+function Drawer({ children, chatId }) {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
   return (
     <div className="drawer"> {/* The root container */}
 
@@ -82,35 +109,18 @@ function Drawer({ children, sidebarOpen, setSidebarOpen, chatHistory, chatId, cr
         <label htmlFor="drawer-toggle" className="drawer-overlay"></label>
 
         {/* The sidebar content */}
-        <Sidebar
-          chatHistory={chatHistory}
-          chatId={chatId}
-          createNewChat={createNewChat}
-          handleSelectChat={handleSelectChat}
-        />
+        <Sidebar chatId={chatId} />
       </div>
     </div>
   );
 }
 
-function ChatApp() {
+function ChatContent({ chatId, abortControllerRef }) {
   const [messages, setMessages] = React.useState([]);
   const [inputText, setInputText] = React.useState('');
   const [assistants, setAssistants] = React.useState([]);
   const [selectedAssistant, setSelectedAssistant] = React.useState('');
-  const [chatHistory, setChatHistory] = React.useState([]);
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const chatHistoryRef = React.useRef(null);
-  const abortControllerRef = React.useRef(null);
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const chatId = urlParams.get('id');
-
-  // TODO allow deleting individual messages
-  // TODO allow editing of messages
-  // TODO allow adding of new messages
-  // TODO allow forking of chats
-  // TODO handle markdown in message
 
   React.useEffect(() => {
     // Load chat state
@@ -135,9 +145,6 @@ function ChatApp() {
           setSelectedAssistant(data[0].name);
         }
       });
-
-    // Load chat history
-    loadChatHistory();
 
     // Set up SSE listener
     const eventSource = new EventSource(`/${chatId}/events`);
@@ -170,37 +177,6 @@ function ChatApp() {
     }
   }, [messages]);
 
-  const loadChatHistory = () => {
-    fetch('/chats')
-      .then((res) => res.json())
-      .then((data) => {
-        setChatHistory(data);
-      })
-      .catch(err => {
-        console.error('Error loading chat history:', err);
-      });
-  };
-
-  const handleSelectChat = (id) => {
-    window.location.href = `/chat?id=${id}`;
-  };
-
-  const createNewChat = () => {
-    window.location.href = '/chat';
-  };
-
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   const sendMessage = () => {
     if (!inputText.trim()) return;
 
@@ -228,17 +204,6 @@ function ChatApp() {
     setInputText('');
   };
 
-function ChatContent({
-  messages,
-  inputText,
-  setInputText,
-  selectedAssistant,
-  setSelectedAssistant,
-  assistants,
-  chatId,
-  sendMessage,
-  chatHistoryRef
-}) {
   return (
     <>
       <div className="navbar bg-base-300">
@@ -311,26 +276,33 @@ function ChatContent({
   );
 }
 
+function ChatApp() {
+  const abortControllerRef = React.useRef(null);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const chatId = urlParams.get('id');
+
+  // TODO allow deleting individual messages
+  // TODO allow editing of messages
+  // TODO allow adding of new messages
+  // TODO allow forking of chats
+  // TODO handle markdown in message
+
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
-    <Drawer
-      sidebarOpen={sidebarOpen}
-      setSidebarOpen={setSidebarOpen}
-      chatHistory={chatHistory}
-      chatId={chatId}
-      createNewChat={createNewChat}
-      handleSelectChat={handleSelectChat}
-    >
-      <ChatContent
-        messages={messages}
-        inputText={inputText}
-        setInputText={setInputText}
-        selectedAssistant={selectedAssistant}
-        setSelectedAssistant={setSelectedAssistant}
-        assistants={assistants}
-        chatId={chatId}
-        sendMessage={sendMessage}
-        chatHistoryRef={chatHistoryRef}
-      />
+    <Drawer chatId={chatId} >
+      <ChatContent chatId={chatId} abortControllerRef={abortControllerRef} />
     </Drawer>
   );
 }
