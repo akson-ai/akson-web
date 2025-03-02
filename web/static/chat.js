@@ -4,8 +4,14 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
   const copyToClipboard = () => {
     navigator.clipboard.writeText(content)
       .then(() => {
-        // Could add a toast notification here
-        console.log('Message copied to clipboard');
+        // Show toast notification
+        const toast = document.getElementById('toast');
+        if (toast) {
+          toast.classList.remove('hidden');
+          setTimeout(() => {
+            toast.classList.add('hidden');
+          }, 3000);
+        }
       })
       .catch(err => {
         console.error('Failed to copy message: ', err);
@@ -526,6 +532,13 @@ function ChatApp() {
       >
         <i className="fas fa-keyboard mr-1"></i>
         <span>⌘ + /</span>
+      </div>
+      
+      {/* Toast notification */}
+      <div id="toast" className="toast toast-end hidden">
+        <div className="alert alert-success">
+          <span>Copied to clipboard!</span>
+        </div>
       </div>
     </>
   );
