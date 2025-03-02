@@ -43,21 +43,12 @@ function Sidebar({ chatId }) {
     window.location.href = `/chat?id=${id}`;
   };
 
-  const createNewChat = () => {
-    window.location.href = '/chat';
-  };
-
   React.useEffect(() => {
     loadChatHistory();
   }, []);
 
   return (
     <div className="bg-base-200 w-80 h-full flex flex-col">
-      <div className="p-4 border-b border-base-300">
-        <button className="btn btn-secondary w-full" onClick={createNewChat}>
-          New Chat
-        </button>
-      </div>
       <div className="overflow-y-auto flex-grow">
         <ul className="menu p-4 w-full">
           {chatHistory.map(chat => (
@@ -204,12 +195,19 @@ function ChatContent({ chatId, abortControllerRef }) {
     setInputText('');
   };
 
+  const createNewChat = () => {
+    window.location.href = '/chat';
+  };
+
   return (
     <>
-      <div className="p-2">
+      <div className="p-2 flex justify-between items-center">
         <label htmlFor="drawer-toggle" className="btn btn-square btn-ghost">
           <i className="fas fa-clock-rotate-left text-lg"></i>
         </label>
+        <button className="btn btn-square btn-ghost" onClick={createNewChat}>
+          <i className="fas fa-comment-medical"></i>
+        </button>
       </div>
 
       <div className="flex flex-col max-w-prose mx-auto h-[calc(100vh-64px)] w-full">
