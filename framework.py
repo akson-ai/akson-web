@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Callable, Literal, NotRequired, Optional, Sequence, TypedDict
@@ -58,6 +59,7 @@ MessageCategory = Literal["info", "success", "warning", "error"]
 class Message(TypedDict):
     """Messages that are inside a chat."""
 
+    id: str
     role: Literal["user", "assistant"]
     name: str
     content: str
@@ -65,7 +67,6 @@ class Message(TypedDict):
     # They should not be sent to the completion API.
     # They get filtered out from Chat.state.messages list provided to the Assistant.run().
     category: NotRequired[Optional[MessageCategory]]
-    # TODO add id to Message
 
 
 class ChatState(BaseModel):
@@ -122,7 +123,13 @@ class Chat:
 
     async def add_message(self, content: str, category: Optional[MessageCategory] = None):
         assert isinstance(self._assistant, Assistant)
-        message = Message(role="assistant", name=self._assistant.name, content=content, category=category)
+        message = Message(
+            id=str(uuid.uuid4()),
+            role="assistant",
+            name=self._assistant.name,
+            content=content,
+            category=category,
+        )
         return await self._add_message(message)
 
     async def _add_message(self, message: Message):
@@ -143,7 +150,13 @@ class Chat:
     async def end_message(self):
         assert isinstance(self._assistant, Assistant)
         content = "".join(self._chunks)
-        message = Message(role="assistant", name=self._assistant.name, content=content, category=self._message_category)
+        message = Message(
+            id=str(uuid.uuid4()),
+            role="assistant",
+            name=self._assistant.name,
+            content=content,
+            category=self._message_category,
+        )
         self.state.messages.append(message)
 
     async def _queue_message(self, message: dict):
@@ -394,7 +407,7 @@ if __name__ == "__main__":
             return a + b
 
     chat = Chat(state=ChatState.create_new("id", "assistant"))
-    chat.state.messages.append({"role": "user", "name": "user", "content": "What is three plus one?"})
+    chat.state.messages.append({"id": "1", "role": "user", "name": "user", "content": "What is three plus one?"})
 
     mathematician = Mathematician()
     message = mathematician.run(chat)

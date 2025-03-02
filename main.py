@@ -18,8 +18,6 @@ from logger import logger
 
 # TODO write an email assistant
 # TODO think about how to convert assistants to agents
-# TODO add Replier assistant
-# TODO add Rewriter assistant
 # TODO add more use case items
 
 load_dotenv()
@@ -139,6 +137,7 @@ async def set_assistant(assistant: str = Body(...), chat: Chat = Depends(_get_ch
 class MessageRequest(BaseModel):
     content: str = Body(...)
     assistant: str = Body(...)
+    id: str = Body(...)
 
 
 def _get_assistant(message: MessageRequest) -> Assistant:
@@ -163,7 +162,12 @@ async def send_message(
             await chat._queue_message({"type": "clear"})
             return
 
-        user_message = Message(role="user", name="You", content=message.content)
+        user_message = Message(
+            id=message.id,
+            role="user",
+            name="You",
+            content=message.content,
+        )
         chat.state.messages.append(user_message)
 
         await assistant.run(chat)
@@ -174,6 +178,16 @@ async def send_message(
         chat._request = None
         chat._assistant = None
         chat.state.save_to_disk()
+
+
+@app.delete("/{chat_id}/message/{message_id}")
+async def delete_message(
+    message_id: str,
+    chat: Chat = Depends(_get_chat),
+):
+    """Delete a message by its ID."""
+    chat.state.messages = [msg for msg in chat.state.messages if msg.get("id") != message_id]
+    chat.state.save_to_disk()
 
 
 @app.get("/{chat_id}/events")

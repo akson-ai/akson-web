@@ -1,4 +1,4 @@
-function ChatMessage({ role, name, content, category, onDelete }) {
+function ChatMessage({ id, role, name, content, category, onDelete }) {
   const [isHovered, setIsHovered] = React.useState(false);
 
   const copyToClipboard = () => {
@@ -49,8 +49,8 @@ function ChatMessage({ role, name, content, category, onDelete }) {
               <i className="fas fa-copy"></i>
             </button>
             <button
-              className="btn btn-xs btn-ghost text-error btn-square"
-              onClick={() => onDelete && onDelete()}
+              className="btn btn-xs btn-ghost btn-square btn-error"
+              onClick={() => onDelete(id)}
               title="Delete message"
             >
               <i className="fas fa-trash"></i>
@@ -179,6 +179,7 @@ function ChatContent({ chatId, abortControllerRef }) {
       .then((state) => {
         setSelectedAssistant(state.assistant);
         setMessages(state.messages.map(msg => ({
+          id: msg.id,
           role: msg.role,
           name: msg.name,
           content: msg.content,
@@ -203,7 +204,7 @@ function ChatContent({ chatId, abortControllerRef }) {
       console.log(data)
 
       if (data.type === 'begin_message') {
-        setMessages(prev => [...prev, { role: data.role, name: data.name, content: '', category: data.category }]);
+        setMessages(prev => [...prev, { id: data.id, role: data.role, name: data.name, content: '', category: data.category }]);
       } else if (data.type === 'clear') {
         setMessages([]);
       } else if (data.type === 'add_chunk') {
@@ -268,7 +269,16 @@ function ChatContent({ chatId, abortControllerRef }) {
   const sendMessage = () => {
     if (!inputText.trim()) return;
 
-    setMessages(prev => [...prev, { role: 'user', name: 'You', content: inputText }]);
+    // Generate a unique ID for the message
+    const messageId = crypto.randomUUID();
+
+    // Add message to UI with the generated ID
+    setMessages(prev => [...prev, {
+      id: messageId,
+      role: 'user',
+      name: 'You',
+      content: inputText
+    }]);
 
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
@@ -277,6 +287,7 @@ function ChatContent({ chatId, abortControllerRef }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        id: messageId,
         content: inputText,
         assistant: selectedAssistant,
       }),
@@ -292,14 +303,13 @@ function ChatContent({ chatId, abortControllerRef }) {
     setInputText('');
   };
 
-  const deleteMessage = (index) => {
+  const deleteMessage = (messageId) => {
     // Optimistically update UI
-    const newMessages = [...messages];
-    newMessages.splice(index, 1);
+    const newMessages = messages.filter(msg => msg.id !== messageId);
     setMessages(newMessages);
 
     // Send delete request to backend
-    fetch(`/${chatId}/message/${index}`, {
+    fetch(`/${chatId}/message/${messageId}`, {
       method: 'DELETE',
     })
     .then(response => {
@@ -332,14 +342,15 @@ function ChatContent({ chatId, abortControllerRef }) {
 
       <div className="flex flex-col max-w-prose mx-auto h-[calc(100vh-64px)] w-full">
         <div id="chatHistory" className="p-4 overflow-y-auto flex-grow" ref={chatHistoryRef}>
-          {messages.map((msg, index) => (
+          {messages.map((msg) => (
             <ChatMessage
-              key={index}
+              id={msg.id}
+              key={msg.id}
               role={msg.role}
               content={msg.content}
               name={msg.name}
               category={msg.category}
-              onDelete={() => deleteMessage(index)}
+              onDelete={deleteMessage}
             />
           ))}
         </div>
@@ -450,9 +461,7 @@ function ChatApp() {
   const urlParams = new URLSearchParams(window.location.search);
   const chatId = urlParams.get('id');
 
-  // TODO allow deleting individual messages
   // TODO allow editing of messages
-  // TODO allow adding of new messages
   // TODO allow forking of chats
   // TODO handle markdown in message
   // TODO when new chat is persisted, reload chat history
