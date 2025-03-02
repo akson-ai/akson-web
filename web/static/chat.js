@@ -30,6 +30,7 @@ function ChatApp() {
   const [inputText, setInputText] = React.useState('');
   const [assistants, setAssistants] = React.useState([]);
   const [selectedAssistant, setSelectedAssistant] = React.useState('');
+  const [chatHistory, setChatHistory] = React.useState([]);
   const chatHistoryRef = React.useRef(null);
   const abortControllerRef = React.useRef(null);
 
@@ -67,6 +68,9 @@ function ChatApp() {
         }
       });
 
+    // Load chat history
+    loadChatHistory();
+
     // Set up SSE listener
     const eventSource = new EventSource(`/${chatId}/events`);
     eventSource.onmessage = function(event) {
@@ -97,6 +101,25 @@ function ChatApp() {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const loadChatHistory = () => {
+    fetch('/chats')
+      .then((res) => res.json())
+      .then((data) => {
+        setChatHistory(data);
+      })
+      .catch(err => {
+        console.error('Error loading chat history:', err);
+      });
+  };
+
+  const handleSelectChat = (id) => {
+    window.location.href = `/chat?id=${id}`;
+  };
+
+  const createNewChat = () => {
+    window.location.href = '/chat';
+  };
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {
