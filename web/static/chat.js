@@ -327,16 +327,41 @@ function ChatContent({ chatId, abortControllerRef }) {
 
   return (
     <>
-      <div className="p-2 flex justify-between items-center">
-        <div className="tooltip tooltip-right" data-tip="Chat history">
-          <label htmlFor="drawer-toggle" className="btn btn-square btn-ghost">
-            <i className="fas fa-clock-rotate-left text-lg"></i>
-          </label>
+      <div className="navbar bg-base-100 shadow-sm">
+        <div className="navbar-start">
+          <div className="tooltip tooltip-right" data-tip="Chat history">
+            <label htmlFor="drawer-toggle" className="btn btn-ghost btn-circle">
+              <i className="fas fa-clock-rotate-left text-lg"></i>
+            </label>
+          </div>
         </div>
-        <div className="tooltip tooltip-left" data-tip="New chat">
-          <button className="btn btn-square btn-ghost" onClick={createNewChat}>
-            <i className="fas fa-comment-medical text-lg"></i>
-          </button>
+        <div className="navbar-center">
+          <select
+            className="select select-bordered w-full max-w-xs"
+            value={selectedAssistant}
+            onChange={(e) => {
+              const assistant = e.target.value;
+              setSelectedAssistant(assistant);
+              fetch(`/${chatId}/assistant`, {
+                method: 'PUT',
+                body: assistant,
+              });
+              document.getElementById('messageInput').focus();
+            }}
+          >
+            {assistants.map(assistant => (
+              <option key={assistant.name} value={assistant.name}>
+                {assistant.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="navbar-end">
+          <div className="tooltip tooltip-left" data-tip="New chat">
+            <button className="btn btn-ghost btn-circle" onClick={createNewChat}>
+              <i className="fas fa-comment-medical text-lg"></i>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -355,35 +380,8 @@ function ChatContent({ chatId, abortControllerRef }) {
           ))}
         </div>
         <div id="chatControls" className="flex flex-col mt-auto p-4 space-y-2">
-          <label className="form-control w-full max-w-xs">
-            <div className="label">
-              <span className="label-text">Select assistant</span>
-            </div>
-            <select
-              className="select select-bordered"
-              value={selectedAssistant}
-              onChange={(e) => {
-                const assistant = e.target.value;
-                setSelectedAssistant(assistant);
-                fetch(`/${chatId}/assistant`, {
-                  method: 'PUT',
-                  body: assistant,
-                });
-                document.getElementById('messageInput').focus();
-              }}
-            >
-              {assistants.map(assistant => (
-                <option key={assistant.name} value={assistant.name}>
-                  {assistant.name}
-                </option>
-              ))}
-            </select>
-          </label>
           <div className="flex flex-col space-y-2">
             <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Send message</span>
-              </div>
               <div className="flex space-x-2">
                 <input
                   id="messageInput"
