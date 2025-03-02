@@ -31,6 +31,7 @@ function ChatApp() {
   const [assistants, setAssistants] = React.useState([]);
   const [selectedAssistant, setSelectedAssistant] = React.useState('');
   const [chatHistory, setChatHistory] = React.useState([]);
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const chatHistoryRef = React.useRef(null);
   const abortControllerRef = React.useRef(null);
 
@@ -42,7 +43,6 @@ function ChatApp() {
   // TODO allow adding of new messages
   // TODO allow forking of chats
   // TODO handle markdown in message
-  // TODO show chat history on left drawer
 
   React.useEffect(() => {
     // Load chat state
@@ -161,56 +161,114 @@ function ChatApp() {
   };
 
   return (
-    <div className="flex flex-col max-w-prose mx-auto h-screen">
-      <div id="chatHistory" className="p-4 overflow-y-auto" ref={chatHistoryRef}>
-        {messages.map((msg, index) => (
-          <ChatMessage key={index} role={msg.role} content={msg.content} name={msg.name} category={msg.category} />
-        ))}
-      </div>
-      <div id="chatControls" className="flex flex-col mt-auto p-4 space-y-2">
-        <label className="form-control w-full max-w-xs">
-          <div className="label">
-            <span className="label-text">Select assistant</span>
+    <div className="drawer"> {/* The root container */}
+
+      {/* A hidden checkbox to toggle the visibility of the sidebar */}
+      <input id="drawer-toggle" type="checkbox" className="drawer-toggle" checked={sidebarOpen} onChange={() => setSidebarOpen(!sidebarOpen)} />
+
+      {/* All main page content goes here */}
+      <div className="drawer-content flex flex-col">
+        <div className="navbar bg-base-300">
+          <div className="flex-none">
+            <label htmlFor="drawer-toggle" className="btn btn-square btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-6 h-6 stroke-current">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h18M9 8h12M9 12h12M9 16h12M3 20h18"></path>
+              </svg>
+            </label>
           </div>
-          <select
-            className="select select-bordered"
-            value={selectedAssistant}
-            onChange={(e) => {
-              const assistant = e.target.value;
-              setSelectedAssistant(assistant);
-              fetch(`/${chatId}/assistant`, {
-                method: 'PUT',
-                body: assistant,
-              });
-              document.getElementById('messageInput').focus();
-            }}
-          >
-            {assistants.map(assistant => (
-              <option key={assistant.name} value={assistant.name}>
-                {assistant.name}
-              </option>
+          <div className="flex-1">
+            <span className="text-xl font-bold">Chat</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col max-w-prose mx-auto h-[calc(100vh-64px)] w-full">
+          <div id="chatHistory" className="p-4 overflow-y-auto flex-grow" ref={chatHistoryRef}>
+            {messages.map((msg, index) => (
+              <ChatMessage key={index} role={msg.role} content={msg.content} name={msg.name} category={msg.category} />
             ))}
-          </select>
-        </label>
-        <div className="flex flex-col space-y-2">
-          <label className="form-control w-full">
-            <div className="label">
-              <span className="label-text">Send message</span>
+          </div>
+          <div id="chatControls" className="flex flex-col mt-auto p-4 space-y-2">
+            <label className="form-control w-full max-w-xs">
+              <div className="label">
+                <span className="label-text">Select assistant</span>
+              </div>
+              <select
+                className="select select-bordered"
+                value={selectedAssistant}
+                onChange={(e) => {
+                  const assistant = e.target.value;
+                  setSelectedAssistant(assistant);
+                  fetch(`/${chatId}/assistant`, {
+                    method: 'PUT',
+                    body: assistant,
+                  });
+                  document.getElementById('messageInput').focus();
+                }}
+              >
+                {assistants.map(assistant => (
+                  <option key={assistant.name} value={assistant.name}>
+                    {assistant.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex flex-col space-y-2">
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text">Send message</span>
+                </div>
+                <div className="flex space-x-2">
+                  <input
+                    id="messageInput"
+                    type="text"
+                    className="input input-bordered flex-1"
+                    placeholder="Type your message..."
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    autoFocus
+                  />
+                  <button className="btn btn-primary" onClick={sendMessage}>&uarr;</button>
+                </div>
+              </label>
             </div>
-            <div className="flex space-x-2">
-              <input
-                id="messageInput"
-                type="text"
-                className="input input-bordered flex-1"
-                placeholder="Type your message..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                autoFocus
-              />
-              <button className="btn" onClick={sendMessage}>&uarr;</button>
-            </div>
-          </label>
+          </div>
+        </div>
+      </div> {/* End of main page content */}
+
+      {/* Sidebar wrapper */}
+      <div className="drawer-side">
+        {/* A dark overlay that covers the whole page when the drawer is open */}
+        <label htmlFor="drawer-toggle" className="drawer-overlay"></label>
+
+        {/* The sidebar content */}
+        <div className="bg-base-200 w-80 h-full flex flex-col">
+          <div className="p-4 border-b border-base-300">
+            <button className="btn btn-secondary w-full" onClick={createNewChat} >
+              New Chat
+            </button>
+          </div>
+          <div className="overflow-y-auto flex-grow">
+            <ul className="menu p-4 w-full">
+              {chatHistory.map(chat => (
+                <li key={chat.id} className={chat.id === chatId ? "bordered" : ""}>
+                  <a
+                    href={`/chat?id=${chat.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleSelectChat(chat.id);
+                    }}
+                    className={chat.id === chatId ? "active" : ""}
+                  >
+                    {chat.title || "Untitled Chat"}
+                    <span className="text-xs opacity-50 ml-2">
+                      {new Date(chat.last_updated).toLocaleDateString()}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </div>
