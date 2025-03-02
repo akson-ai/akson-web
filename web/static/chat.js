@@ -165,6 +165,8 @@ function ChatContent({ chatId, abortControllerRef }) {
   const [inputText, setInputText] = React.useState('');
   const [assistants, setAssistants] = React.useState([]);
   const [selectedAssistant, setSelectedAssistant] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
   const chatHistoryRef = React.useRef(null);
   const messageInputRef = React.useRef(null);
 
@@ -174,8 +176,14 @@ function ChatContent({ chatId, abortControllerRef }) {
 
   React.useEffect(() => {
     // Load chat state
+    setIsLoading(true);
+    setError(null);
+    
     fetch(`/${chatId}/state`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load chat state');
+        return res.json();
+      })
       .then((state) => {
         setSelectedAssistant(state.assistant);
         setMessages(state.messages.map(msg => ({
@@ -185,6 +193,12 @@ function ChatContent({ chatId, abortControllerRef }) {
           content: msg.content,
           category: msg.category,
         })));
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error loading chat state:', err);
+        setError('Failed to load chat. Please try again.');
+        setIsLoading(false);
       });
 
     // Load assistants
@@ -366,18 +380,33 @@ function ChatContent({ chatId, abortControllerRef }) {
       </div>
 
       <div className="flex flex-col max-w-prose mx-auto h-[calc(100vh-64px)] w-full">
+        {error && (
+          <div className="alert alert-error shadow-lg m-4">
+            <div>
+              <i className="fas fa-exclamation-circle"></i>
+              <span>{error}</span>
+            </div>
+          </div>
+        )}
+        
         <div id="chatHistory" className="p-4 overflow-y-auto flex-grow" ref={chatHistoryRef}>
-          {messages.map((msg) => (
-            <ChatMessage
-              id={msg.id}
-              key={msg.id}
-              role={msg.role}
-              content={msg.content}
-              name={msg.name}
-              category={msg.category}
-              onDelete={deleteMessage}
-            />
-          ))}
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="loading loading-spinner loading-lg"></div>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <ChatMessage
+                id={msg.id}
+                key={msg.id}
+                role={msg.role}
+                content={msg.content}
+                name={msg.name}
+                category={msg.category}
+                onDelete={deleteMessage}
+              />
+            ))
+          )}
         </div>
         <div id="chatControls" className="flex flex-col mt-auto p-4 space-y-2">
           <div className="flex flex-col space-y-2">
