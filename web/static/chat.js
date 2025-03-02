@@ -415,6 +415,15 @@ function ChatApp() {
       </Drawer>
       
       <KeyboardShortcutsModal />
+      
+      {/* Keyboard shortcuts hint button */}
+      <div 
+        className="fixed bottom-4 right-4 btn btn-sm btn-ghost opacity-60 hover:opacity-100"
+        onClick={() => document.getElementById('shortcuts_modal').showModal()}
+      >
+        <i className="fas fa-keyboard mr-1"></i>
+        <span>⌘ + /</span>
+      </div>
     </>
   );
 }
