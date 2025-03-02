@@ -1,6 +1,23 @@
-function ChatMessage({ role, name, content, category }) {
+function ChatMessage({ role, name, content, category, onDelete }) {
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(content)
+      .then(() => {
+        // Could add a toast notification here
+        console.log('Message copied to clipboard');
+      })
+      .catch(err => {
+        console.error('Failed to copy message: ', err);
+      });
+  };
+
   return (
-    <div className={`chat ${role === 'user' ? 'chat-end' : 'chat-start'}`}>
+    <div
+      className={`chat ${role === 'user' ? 'chat-end' : 'chat-start'}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div className="chat-image avatar">
         <div className="w-10 rounded-full bg-base-300 place-content-center">
           <div className="text-2xl place-self-center">
@@ -11,7 +28,7 @@ function ChatMessage({ role, name, content, category }) {
       <div className="chat-header">
         <time className="text-xs opacity-50">{name}</time>
       </div>
-      <div className={`chat-bubble ${category ? `chat-bubble-${category}` : ''} whitespace-pre-wrap`}>
+      <div className={`chat-bubble mt-1 ${category ? `chat-bubble-${category}` : ''} whitespace-pre-wrap`}>
         {!content ? (
           <div className="flex items-center">
             <div className="loading loading-spinner loading-sm mr-2"></div>
@@ -21,6 +38,26 @@ function ChatMessage({ role, name, content, category }) {
           content
         )}
       </div>
+      {content && (
+        <div className={`chat-footer mt-1 ${isHovered ? 'visible' : 'invisible'}`}>
+          <>
+            <button
+              className="btn btn-xs btn-ghost btn-square"
+              onClick={copyToClipboard}
+              title="Copy message"
+            >
+              <i className="fas fa-copy"></i>
+            </button>
+            <button
+              className="btn btn-xs btn-ghost text-error btn-square"
+              onClick={() => onDelete && onDelete()}
+              title="Delete message"
+            >
+              <i className="fas fa-trash"></i>
+            </button>
+          </>
+        </div>
+      )}
     </div>
   );
 }
@@ -86,9 +123,9 @@ function Drawer({ children, chatId }) {
         setSidebarOpen(prevState => !prevState);
       }
     };
-    
+
     window.addEventListener('keydown', handleSidebarShortcut);
-    
+
     return () => {
       window.removeEventListener('keydown', handleSidebarShortcut);
     };
@@ -194,9 +231,9 @@ function ChatContent({ chatId, abortControllerRef }) {
         createNewChat();
       }
     };
-    
+
     window.addEventListener('keydown', handleNewChatShortcut);
-    
+
     return () => {
       window.removeEventListener('keydown', handleNewChatShortcut);
     };
@@ -213,9 +250,9 @@ function ChatContent({ chatId, abortControllerRef }) {
         }
       }
     };
-    
+
     window.addEventListener('keydown', handleFocusInputShortcut);
-    
+
     return () => {
       window.removeEventListener('keydown', handleFocusInputShortcut);
     };
@@ -255,6 +292,29 @@ function ChatContent({ chatId, abortControllerRef }) {
     setInputText('');
   };
 
+  const deleteMessage = (index) => {
+    // Optimistically update UI
+    const newMessages = [...messages];
+    newMessages.splice(index, 1);
+    setMessages(newMessages);
+
+    // Send delete request to backend
+    fetch(`/${chatId}/message/${index}`, {
+      method: 'DELETE',
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Failed to delete message');
+      }
+      // Message successfully deleted on the server
+    })
+    .catch(error => {
+      console.error('Error deleting message:', error);
+      // Revert the optimistic update if there was an error
+      setMessages(messages);
+    });
+  };
+
   return (
     <>
       <div className="p-2 flex justify-between items-center">
@@ -273,7 +333,14 @@ function ChatContent({ chatId, abortControllerRef }) {
       <div className="flex flex-col max-w-prose mx-auto h-[calc(100vh-64px)] w-full">
         <div id="chatHistory" className="p-4 overflow-y-auto flex-grow" ref={chatHistoryRef}>
           {messages.map((msg, index) => (
-            <ChatMessage key={index} role={msg.role} content={msg.content} name={msg.name} category={msg.category} />
+            <ChatMessage
+              key={index}
+              role={msg.role}
+              content={msg.content}
+              name={msg.name}
+              category={msg.category}
+              onDelete={() => deleteMessage(index)}
+            />
           ))}
         </div>
         <div id="chatControls" className="flex flex-col mt-auto p-4 space-y-2">
@@ -396,7 +463,7 @@ function ChatApp() {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
-      
+
       // Add shortcut for keyboard shortcuts modal
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
         e.preventDefault();
@@ -413,11 +480,11 @@ function ChatApp() {
       <Drawer chatId={chatId}>
         <ChatContent chatId={chatId} abortControllerRef={abortControllerRef} />
       </Drawer>
-      
+
       <KeyboardShortcutsModal />
-      
+
       {/* Keyboard shortcuts hint button */}
-      <div 
+      <div
         className="fixed bottom-4 right-4 btn btn-sm btn-ghost opacity-60 hover:opacity-100"
         onClick={() => document.getElementById('shortcuts_modal').showModal()}
       >
