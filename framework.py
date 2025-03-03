@@ -143,7 +143,12 @@ class Chat:
         self._message_category: Optional[MessageCategory] = category
         assert isinstance(self._assistant, Assistant)
         await self._queue_message(
-            {"type": "begin_message", "id": self._message_id, "name": self._assistant.name, "category": category}
+            {
+                "type": "begin_message",
+                "id": self._message_id,
+                "name": self._assistant.name,
+                "category": category,
+            }
         )
 
     async def add_chunk(self, chunk: str):
@@ -161,6 +166,7 @@ class Chat:
             category=self._message_category,
         )
         self.state.messages.append(message)
+        await self._queue_message({"type": "end_message", "id": self._message_id})
 
     async def _queue_message(self, message: dict):
         assert isinstance(self._request, Request)

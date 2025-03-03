@@ -272,6 +272,8 @@ function ChatContent({ chatId, abortControllerRef }) {
           lastMessage.content += data.chunk;
           return newMessages;
         });
+      } else if (data.type === 'end_message') {
+        // TODO handle end_message in web app
       }
     };
 
