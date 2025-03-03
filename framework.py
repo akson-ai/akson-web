@@ -138,10 +138,13 @@ class Chat:
         await self.end_message()
 
     async def begin_message(self, category: Optional[MessageCategory] = None):
+        self._message_id = str(uuid.uuid4())
         self._chunks = []
         self._message_category: Optional[MessageCategory] = category
         assert isinstance(self._assistant, Assistant)
-        await self._queue_message({"type": "begin_message", "name": self._assistant.name, "category": category})
+        await self._queue_message(
+            {"type": "begin_message", "id": self._message_id, "name": self._assistant.name, "category": category}
+        )
 
     async def add_chunk(self, chunk: str):
         self._chunks.append(chunk)
@@ -151,7 +154,7 @@ class Chat:
         assert isinstance(self._assistant, Assistant)
         content = "".join(self._chunks)
         message = Message(
-            id=str(uuid.uuid4()),
+            id=self._message_id,
             role="assistant",
             name=self._assistant.name,
             content=content,
