@@ -1,3 +1,9 @@
+// TODO allow editing of messages
+// TODO allow forking of chats
+// TODO handle markdown in message
+// TODO when new chat is persisted, reload chat history
+// TODO highlight code blocks
+
 function ChatMessage({ id, role, name, content, category, onDelete }) {
   const [isHovered, setIsHovered] = React.useState(false);
 
@@ -524,11 +530,6 @@ function ChatApp() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const chatId = urlParams.get('id');
-
-  // TODO allow editing of messages
-  // TODO allow forking of chats
-  // TODO handle markdown in message
-  // TODO when new chat is persisted, reload chat history
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {
