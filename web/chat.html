@@ -8,13 +8,23 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
+
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.development.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.development.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-    <script src="chat.js" type="text/babel"></script>
+
+    <!-- TDOO use react-daisyui component library -->
+    <!-- "react-daisyui": "https://esm.run/react-daisyui@5" -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18?dev",
+          "react-dom/": "https://esm.sh/react-dom@18&dev/"
+        }
+      }
+    </script>
+    <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="chat.js" type="text/babel" data-type="module" data-presets="react"></script>
 </head>
 <body>
     <div id="root"></div>

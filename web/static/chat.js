@@ -4,6 +4,9 @@
 // TODO when new chat is persisted, reload chat history
 // TODO highlight code blocks
 
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+
 function ChatMessage({ id, role, name, content, category, onDelete }) {
   const [isHovered, setIsHovered] = React.useState(false);
 
@@ -579,5 +582,5 @@ function ChatApp() {
 }
 
 // Render your app
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const root = createRoot(document.getElementById('root'));
 root.render(<ChatApp />);
