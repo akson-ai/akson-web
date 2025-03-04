@@ -44,25 +44,6 @@ class Toolset:
         return messages
 
 
-def get_type_string(python_type):
-    """Convert Python type to JSON schema type string"""
-    if python_type is str:
-        return "string"
-    elif python_type is int:
-        return "integer"
-    elif python_type is float:
-        return "number"
-    elif python_type is bool:
-        return "boolean"
-    elif python_type is list or get_origin(python_type) is list:
-        return "array"
-    elif python_type is dict or get_origin(python_type) is dict:
-        return "object"
-    elif isinstance(python_type, type) and issubclass(python_type, BaseModel):
-        return "object"
-    return "string"
-
-
 def function_to_pydantic_model(func):
     sig = signature(func)
     type_hints = get_type_hints(func)
@@ -97,7 +78,6 @@ def function_to_pydantic_model(func):
             Field(
                 default=default,
                 description=param_descriptions.get(param_name, None),
-                json_schema_extra={"type": get_type_string(field_type)},
             ),
         )
 
