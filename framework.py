@@ -115,8 +115,8 @@ class Chat:
         self._queue = asyncio.Queue()
 
         # These will be set by the request handler before passing the Chat to the Assistant.run().
-        self._request: Request | None
-        self._assistant: Assistant | None
+        self._request: Optional[Request] = None
+        self._assistant: Optional[Assistant] = None
 
     # TODO implement Chat.add_image method
     async def add_image(self): ...
@@ -169,7 +169,8 @@ class Chat:
         await self._queue_message({"type": "end_message", "id": self._message_id})
 
     async def _queue_message(self, message: dict):
-        assert isinstance(self._request, Request)
+        if not isinstance(self._request, Request):
+            return
         if await self._request.is_disconnected():
             raise ClientDisconnect
         await self._queue.put(message)
