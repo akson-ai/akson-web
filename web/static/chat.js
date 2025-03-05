@@ -468,7 +468,7 @@ function ChatContent({ chatId, abortControllerRef }) {
                   placeholder="Type your message..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                   autoFocus
                 />
                 <button className="btn btn-primary" onClick={sendMessage}>
