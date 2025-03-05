@@ -1,6 +1,6 @@
 import json
 from inspect import Parameter, getdoc, signature
-from typing import Any, Callable, Union, get_args, get_origin, get_type_hints
+from typing import Callable, get_type_hints
 
 import docstring_parser
 from openai import pydantic_function_tool
@@ -23,7 +23,6 @@ class Toolset:
 
     def openai_schema(self) -> list[ChatCompletionToolParam]:
         """Returns the list of tools to be passed into completion reqeust."""
-        # TODO remove pydantic model conversion
         return [pydantic_function_tool(function_to_pydantic_model(f)) for f in self.functions.values()]
 
     def process_tool_calls(self, tool_calls: list[ParsedFunctionToolCall]) -> list[ChatCompletionToolMessageParam]:
@@ -37,6 +36,12 @@ class Toolset:
             assert isinstance(instance, BaseModel)
             func = self.functions[function.name]
             kwargs = {name: getattr(instance, name) for name in instance.model_fields}
+
+            # Fill in default values
+            for param in signature(func).parameters.values():
+                if param.default is not Parameter.empty:
+                    kwargs[param.name] = param.default
+
             result = func(**kwargs)
             logger.info("%s call result: %s", function.name, result)
             messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": json.dumps(result)})
@@ -48,41 +53,23 @@ def function_to_pydantic_model(func):
     sig = signature(func)
     type_hints = get_type_hints(func)
     docstring = getdoc(func)
-    parsed_docstring = docstring_parser.parse(docstring) if docstring else None
-    param_descriptions = {
-        param.arg_name: param.description for param in (parsed_docstring.params if parsed_docstring else [])
-    }
+    func_description = None
+    param_descriptions = {}
+    if docstring:
+        parsed_docstring = docstring_parser.parse(docstring)
+        func_description = parsed_docstring.short_description
+        if parsed_docstring:
+            for param in parsed_docstring.params:
+                param_descriptions[param.arg_name] = param.description
 
     fields = {}
     for param_name, param in sig.parameters.items():
-        field_type = type_hints.get(param_name, Parameter.empty)
-        default = param.default
+        type_hint = type_hints.get(param_name, str)
 
-        # Handle missing type hints
-        if field_type is Parameter.empty:
-            field_type = Any
+        # All fields are required. Optional parameters are emulated by using a union type with null.
+        if param.default is not Parameter.empty:
+            type_hint |= None
 
-        # Handle Optional types
-        if get_origin(field_type) is Union:
-            args = get_args(field_type)
-            if type(None) in args:
-                field_type = next(arg for arg in args if arg is not type(None))
-                if default is Parameter.empty:
-                    default = None
+        fields[param_name] = (type_hint, Field(description=param_descriptions.get(param_name, None)))
 
-        if default is Parameter.empty:
-            default = ...
-
-        fields[param_name] = (
-            field_type,
-            Field(
-                default=default,
-                description=param_descriptions.get(param_name, None),
-            ),
-        )
-
-    return create_model(
-        func.__name__,
-        __doc__=parsed_docstring.short_description if parsed_docstring else None,
-        **fields,
-    )
+    return create_model(func.__name__, __doc__=func_description, **fields)
