@@ -128,7 +128,7 @@ function Sidebar({ chatId }) {
             <div className="loading loading-spinner loading-md"></div>
           </div>
         ) : (
-          <ul className="menu p-4 w-full">
+          <ul className="menu w-full">
             {filteredChats.length > 0 ? (
               filteredChats.map(chat => (
                 <li key={chat.id} className={chat.id === chatId ? "bordered" : ""}>
@@ -138,10 +138,10 @@ function Sidebar({ chatId }) {
                       e.preventDefault();
                       handleSelectChat(chat.id);
                     }}
-                    className={chat.id === chatId ? "active" : ""}
+                    className={`flex items-center justify-between w-full ${chat.id === chatId ? "active" : ""}`}
                   >
-                    {chat.title}
-                    <span className="text-xs opacity-50 ml-2">
+                    <span className="truncate max-w-[70%]">{chat.title}</span>
+                    <span className="text-xs opacity-50 whitespace-nowrap">
                       {new Date(chat.last_updated).toLocaleDateString()}
                     </span>
                   </a>
