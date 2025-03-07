@@ -79,20 +79,17 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
 
 function Sidebar({ chatId }) {
   const [chatHistory, setChatHistory] = React.useState([]);
-  const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [hoveredChatId, setHoveredChatId] = React.useState(null);
 
   const loadChatHistory = () => {
-    setIsLoading(true);
     fetch('/chats')
       .then((res) => res.json())
       .then((data) => {
         setChatHistory(data);
-        setIsLoading(false);
       })
       .catch(err => {
         console.error('Error loading chat history:', err);
-        setIsLoading(false);
       });
   };
 
@@ -105,6 +102,33 @@ function Sidebar({ chatId }) {
 
   const handleSelectChat = (id) => {
     window.location.href = `/chat?id=${id}`;
+  };
+
+  const handleDeleteChat = (e, id) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (confirm('Are you sure you want to delete this chat?')) {
+      fetch(`/${id}`, {
+        method: 'DELETE',
+      })
+        .then((res) => {
+          if (res.ok) {
+            // Remove the chat from the list
+            setChatHistory(prev => prev.filter(chat => chat.id !== id));
+
+            // If the deleted chat is the current one, redirect to a new chat
+            if (id === chatId) {
+              window.location.href = '/chat';
+            }
+          } else {
+            console.error('Failed to delete chat');
+          }
+        })
+        .catch(err => {
+          console.error('Error deleting chat:', err);
+        });
+    }
   };
 
   React.useEffect(() => {
@@ -123,35 +147,33 @@ function Sidebar({ chatId }) {
         />
       </div>
       <div className="overflow-y-auto flex-grow">
-        {isLoading ? (
-          <div className="flex justify-center items-center p-4">
-            <div className="loading loading-spinner loading-md"></div>
-          </div>
-        ) : (
-          <ul className="menu w-full">
-            {filteredChats.length > 0 ? (
-              filteredChats.map(chat => (
-                <li key={chat.id} className={chat.id === chatId ? "bordered" : ""}>
-                  <a
-                    href={`/chat?id=${chat.id}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleSelectChat(chat.id);
-                    }}
-                    className={`flex items-center justify-between w-full ${chat.id === chatId ? "active" : ""}`}
-                  >
-                    <span className="truncate max-w-[70%]">{chat.title}</span>
-                    <span className="text-xs opacity-50 whitespace-nowrap">
-                      {new Date(chat.last_updated).toLocaleDateString()}
-                    </span>
-                  </a>
-                </li>
-              ))
-            ) : (
-              <li className="text-center opacity-70">No chats found</li>
-            )}
-          </ul>
-        )}
+        <ul className="menu w-full">
+        {filteredChats.map(chat => (
+          <li
+            key={chat.id}
+            onMouseEnter={() => setHoveredChatId(chat.id)}
+            onMouseLeave={() => setHoveredChatId(null)}
+          >
+            <a
+              href={`/chat?id=${chat.id}`}
+              className="flex"
+              onClick={(e) => {
+                e.preventDefault();
+                handleSelectChat(chat.id);
+              }}
+            >
+              <span className="grow truncate">{chat.title}</span>
+              <button
+                className={`btn btn-xs btn-ghost btn-square btn-error flex-none ${hoveredChatId === chat.id ? 'visible' : 'invisible'}`}
+                onClick={(e) => handleDeleteChat(e, chat.id)}
+                title="Delete chat"
+              >
+                <i className="fas fa-trash"></i>
+              </button>
+            </a>
+          </li>
+        ))}
+        </ul>
       </div>
     </div>
   );

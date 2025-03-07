@@ -190,6 +190,19 @@ async def delete_message(
     chat.state.save_to_disk()
 
 
+@app.delete("/{chat_id}")
+async def delete_chat(chat_id: str):
+    """Delete a chat by its ID."""
+    # Remove from memory if it exists
+    if chat_id in chats:
+        del chats[chat_id]
+
+    # Remove the file from disk
+    file_path = ChatState.file_path(chat_id)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+
 @app.get("/{chat_id}/events")
 async def get_events(chat: Chat = Depends(_get_chat)):
     """Stream events to the client over SSE."""
