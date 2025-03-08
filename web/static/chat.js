@@ -6,6 +6,7 @@
 
 import React from 'react';
 import {createRoot} from 'react-dom/client';
+import {Button, Input} from 'react-daisyui';
 
 function ChatMessage({ id, role, name, content, category, onDelete }) {
   const [isHovered, setIsHovered] = React.useState(false);
@@ -482,20 +483,21 @@ function ChatContent({ chatId, abortControllerRef }) {
           <div className="flex flex-col space-y-2">
             <label className="form-control w-full">
               <div className="flex space-x-2">
-                <input
+                <Input
                   id="messageInput"
                   ref={messageInputRef}
                   type="text"
-                  className="input input-bordered flex-1"
+                  className="flex-1"
+                  bordered={true}
                   placeholder="Type your message..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                   autoFocus
                 />
-                <button className="btn btn-primary" onClick={sendMessage}>
+                <Button color="primary" onClick={sendMessage}>
                   <i className="fas fa-arrow-up"></i>
-                </button>
+                </Button>
               </div>
             </label>
           </div>
