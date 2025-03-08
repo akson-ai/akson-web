@@ -3,6 +3,7 @@
 // TODO handle markdown in message
 // TODO when new chat is persisted, reload chat history
 // TODO highlight code blocks
+// TODO fix jumping to button when streaming
 
 import React from 'react';
 import {createRoot} from 'react-dom/client';
