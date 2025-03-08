@@ -4,6 +4,7 @@
 // TODO when new chat is persisted, reload chat history
 // TODO highlight code blocks
 // TODO fix jumping to button when streaming
+// TODO ask confirmation when deleting single message
 
 import React from 'react';
 import {createRoot} from 'react-dom/client';
@@ -57,20 +58,12 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
       {content && (
         <ChatBubble.Footer className={`mt-1 ${isHovered ? 'visible' : 'invisible'}`}>
           <>
-            <button
-              className="btn btn-xs btn-ghost btn-square"
-              onClick={copyToClipboard}
-              title="Copy message"
-            >
+            <Button size="xs" color="ghost" shape="square" title="Copy message" onClick={copyToClipboard}>
               <i className="fas fa-copy"></i>
-            </button>
-            <button
-              className="btn btn-xs btn-ghost btn-square btn-error"
-              onClick={() => onDelete(id)}
-              title="Delete message"
-            >
+            </Button>
+            <Button size="xs" color="ghost" shape="square" title="Delete message" onClick={() => onDelete(id)}>
               <i className="fas fa-trash"></i>
-            </button>
+            </Button>
           </>
         </ChatBubble.Footer>
       )}
@@ -164,13 +157,13 @@ function Sidebar({ chatId }) {
               }}
             >
               <span className="grow truncate">{chat.title}</span>
-              <button
-                className={`btn btn-xs btn-ghost btn-square btn-error flex-none ${hoveredChatId === chat.id ? 'visible' : 'invisible'}`}
+              <Button size="xs" shape="square" color="ghost"
+                className={`flex-none ${hoveredChatId === chat.id ? 'visible' : 'invisible'}`}
                 onClick={(e) => handleDeleteChat(e, chat.id)}
                 title="Delete chat"
               >
                 <i className="fas fa-trash"></i>
-              </button>
+              </Button>
             </a>
           </li>
         ))}
@@ -443,9 +436,9 @@ function ChatContent({ chatId, abortControllerRef }) {
         </div>
         <div className="navbar-end">
           <div className="tooltip tooltip-left" data-tip="New chat">
-            <button className="btn btn-ghost btn-circle" onClick={createNewChat}>
+            <Button color="ghost" shape="circle" onClick={createNewChat}>
               <i className="fas fa-comment-medical text-lg"></i>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -546,7 +539,7 @@ function KeyboardShortcutsModal() {
         </div>
         <div className="modal-action">
           <form method="dialog">
-            <button className="btn">Close</button>
+            <Button>Close</Button>
           </form>
         </div>
       </div>
