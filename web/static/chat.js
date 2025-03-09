@@ -51,9 +51,7 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
             <div className="loading loading-spinner loading-sm mr-2"></div>
             <span>Thinking...</span>
           </div>
-        ) : (
-          content
-        )}
+        ) : content}
       </ChatBubble.Message>
       {content && (
         <ChatBubble.Footer className={`mt-1 ${isHovered ? 'visible' : 'invisible'}`}>
