@@ -55,14 +55,12 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
       </ChatBubble.Message>
       {content && (
         <ChatBubble.Footer className={`mt-1 ${isHovered ? 'visible' : 'invisible'}`}>
-          <>
-            <Button size="xs" color="ghost" shape="square" title="Copy message" onClick={copyToClipboard}>
-              <i className="fas fa-copy"></i>
-            </Button>
-            <Button size="xs" color="ghost" shape="square" title="Delete message" onClick={() => onDelete(id)}>
-              <i className="fas fa-trash"></i>
-            </Button>
-          </>
+          <Button size="xs" color="ghost" shape="square" title="Copy message" onClick={copyToClipboard}>
+            <i className="fas fa-copy"></i>
+          </Button>
+          <Button size="xs" color="ghost" shape="square" title="Delete message" onClick={() => onDelete(id)}>
+            <i className="fas fa-trash"></i>
+          </Button>
         </ChatBubble.Footer>
       )}
     </ChatBubble>
