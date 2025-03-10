@@ -16,14 +16,7 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
   const copyToClipboard = () => {
     navigator.clipboard.writeText(content)
       .then(() => {
-        // Show toast notification
-        const toast = document.getElementById('toast');
-        if (toast) {
-          toast.classList.remove('hidden');
-          setTimeout(() => {
-            toast.classList.add('hidden');
-          }, 3000);
-        }
+        showToast('Copied to clipboard!');
       })
       .catch(err => {
         console.error('Failed to copy message: ', err);
@@ -587,11 +580,25 @@ function ChatApp() {
       {/* Toast notification */}
       <div id="toast" className="toast toast-end hidden">
         <div className="alert alert-success">
-          <span>Copied to clipboard!</span>
+          <span id="toast-content"></span>
         </div>
       </div>
     </>
   );
+}
+
+// Utility function to show toast notifications
+function showToast(message, duration = 3000) {
+  const toast = document.getElementById('toast');
+  const toastContent = document.getElementById('toast-content');
+
+  if (toast && toastContent) {
+    toastContent.textContent = message;
+    toast.classList.remove('hidden');
+    setTimeout(() => {
+      toast.classList.add('hidden');
+    }, duration);
+  }
 }
 
 // Render your app
