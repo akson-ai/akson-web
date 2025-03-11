@@ -1,4 +1,5 @@
 import json
+from abc import ABC, abstractmethod
 from inspect import Parameter, getdoc, signature
 from typing import Callable, get_type_hints
 
@@ -14,18 +15,26 @@ from pydantic import BaseModel, Field, create_model
 from logger import logger
 
 
-class Toolset:
+class Toolset(ABC):
+
+    @abstractmethod
+    def get_tools(self) -> list[ChatCompletionToolParam]: ...
+
+    @abstractmethod
+    def handle_tool_calls(self, tool_calls: list[ParsedFunctionToolCall]) -> list[ChatCompletionToolMessageParam]: ...
+
+
+class FunctionToolset(Toolset):
     """Manages the list of tools to be passed into completion reqeust."""
 
-    def __init__(self, owner, functions: list[Callable]) -> None:
-        self.owner = owner
+    def __init__(self, functions: list[Callable]) -> None:
         self.functions = {f.__name__: f for f in functions}
 
-    def openai_schema(self) -> list[ChatCompletionToolParam]:
+    def get_tools(self) -> list[ChatCompletionToolParam]:
         """Returns the list of tools to be passed into completion reqeust."""
         return [pydantic_function_tool(function_to_pydantic_model(f)) for f in self.functions.values()]
 
-    def process_tool_calls(self, tool_calls: list[ParsedFunctionToolCall]) -> list[ChatCompletionToolMessageParam]:
+    def handle_tool_calls(self, tool_calls: list[ParsedFunctionToolCall]) -> list[ChatCompletionToolMessageParam]:
         """This is called each time a response is received from completion method."""
         logger.info("Number of tool calls: %s", len(tool_calls))
         messages = []

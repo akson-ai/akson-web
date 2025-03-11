@@ -4,7 +4,7 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Callable, Literal, NotRequired, Optional, Sequence, TypedDict
+from typing import Any, Literal, NotRequired, Optional, Sequence, TypedDict
 
 from fastapi import Request
 from openai import AsyncOpenAI
@@ -27,7 +27,7 @@ from openai.types.chat.chat_completion_message_tool_call_param import Function
 from pydantic import BaseModel
 from starlette.requests import ClientDisconnect
 
-from function_calling import Toolset
+from function_calling import FunctionToolset, Toolset
 from logger import logger
 
 MessageCategory = Literal["info", "success", "warning", "error"]
@@ -172,11 +172,11 @@ class Assistant(ABC):
 class SimpleAssistant(Assistant):
     """Simple assistant that uses OpenAI's chat API to generate responses."""
 
-    def __init__(self, name: str, system_prompt: str, functions: list[Callable] = []):
-        self._name = name
+    def __init__(self, name: str, system_prompt: str, toolset: Optional[Toolset] = None):
         self.system_prompt = system_prompt
+        self._name = name
         self._client = AsyncOpenAI()
-        self._toolset = Toolset(self, functions)
+        self._toolset = toolset
 
     @property
     def name(self) -> str:
@@ -193,12 +193,13 @@ class SimpleAssistant(Assistant):
         messages.append(_convert_assistant_message(message))
 
         # We keep continue hitting OpenAI API until there are no more tool calls.
-        while message.tool_calls:
-            tool_calls = self._toolset.process_tool_calls(message.tool_calls)
-            messages.extend(tool_calls)
+        if self._toolset:
+            while message.tool_calls:
+                tool_calls = self._toolset.handle_tool_calls(message.tool_calls)
+                messages.extend(tool_calls)
 
-            message = await self._complete(messages, chat)
-            messages.append(_convert_assistant_message(message))
+                message = await self._complete(messages, chat)
+                messages.append(_convert_assistant_message(message))
 
     def _get_openai_messages(self, chat: Chat) -> list[ChatCompletionMessageParam]:
         messages: Sequence[ChatCompletionMessageParam] = []
@@ -266,10 +267,12 @@ class SimpleAssistant(Assistant):
         raise Exception("Stream ended unexpectedly")
 
     def _tool_kwargs(self) -> dict[str, Any]:
-        tools = self._toolset.openai_schema()
-        if tools:
-            return {"tools": tools, "tool_choice": "auto", "parallel_tool_calls": False}
-        return {}
+        if not self._toolset:
+            return {}
+        tools = self._toolset.get_tools()
+        if not tools:
+            return {}
+        return {"tools": tools, "tool_choice": "auto", "parallel_tool_calls": False}
 
 
 def _convert_assistant_message(message: ParsedChatCompletionMessage) -> ChatCompletionAssistantMessageParam:
@@ -307,9 +310,10 @@ class DeclarativeAssistant(SimpleAssistant):
 
     def __init__(self):
         name = self.__class__.__name__
-        prompt = self.__doc__ or ""
+        system_prompt = self.__doc__ or ""
         functions = [getattr(self, name) for name, func in self.__class__.__dict__.items() if callable(func)]
-        super().__init__(name, prompt, functions)
+        toolset = FunctionToolset(functions)
+        super().__init__(name, system_prompt, toolset)
 
 
 # TODO put back StructuredOutput as assistants
