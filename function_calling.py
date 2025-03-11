@@ -17,9 +17,9 @@ from logger import logger
 class Toolset:
     """Manages the list of tools to be passed into completion reqeust."""
 
-    def __init__(self, owner, tools: list[Callable]) -> None:
+    def __init__(self, owner, functions: list[Callable]) -> None:
         self.owner = owner
-        self.functions = {f.__name__: f for f in tools}
+        self.functions = {f.__name__: f for f in functions}
 
     def openai_schema(self) -> list[ChatCompletionToolParam]:
         """Returns the list of tools to be passed into completion reqeust."""
