@@ -30,29 +30,6 @@ from starlette.requests import ClientDisconnect
 from function_calling import Toolset
 from logger import logger
 
-# class Agent(ABC):
-#     """Base class for agents."""
-
-#     name: str
-#     """Name of the agent. Must be unique.
-#     Other agents use this name to refer to it.
-#     It is also displayed in the list of agents."""
-
-#     description: str
-#     """Description of the agent.
-#     It tells what the agent can do. Used during planning."""
-
-#     def __repr__(self):
-#         return f"Agent<{self.name}>"
-
-#     Reply = str | Iterator[str] | Image
-#     Return = Iterator[Reply]
-
-#     @abstractmethod
-#     def message(self, input: str) -> Return:
-#         """Sends a message to the agent. Agents should remember previous messages."""
-
-
 MessageCategory = Literal["info", "success", "warning", "error"]
 
 
@@ -369,31 +346,6 @@ class DeclarativeAssistant(SimpleAssistant):
 #         chat = Chat()
 #         chat.messages.append({"role": "user", "content": user_message})
 #         return self.run(chat)
-
-
-# class ChatAgent(Agent):
-
-#     def __init__(self, name: str, description: str, assistant: Assistant):
-#         super().__init__()
-#         self.name = name
-#         self.description = description
-#         self.assistant = assistant
-#         self.chat = PersistentChat(name)
-#         try:
-#             self.chat.load()
-#         except FileNotFoundError:
-#             pass
-
-#     def message(self, input: str) -> Agent.Return:
-#         if input.strip() == "/clear":
-#             self.chat.clear()
-#             response = "Chat cleared"
-#         else:
-#             self.chat.messages.append({"role": "user", "content": input})
-#             response = self.assistant.run(self.chat)
-#             self.chat.messages.append({"role": "assistant", "content": response})
-#         self.chat.save()
-#         yield response
 
 
 if __name__ == "__main__":
