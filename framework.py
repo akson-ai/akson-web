@@ -312,6 +312,7 @@ class DeclarativeAssistant(SimpleAssistant):
         super().__init__(name, prompt, functions)
 
 
+# TODO put back StructuredOutput as assistants
 # class StructuredOutput:
 #     """Get structured output from a chat model."""
 
