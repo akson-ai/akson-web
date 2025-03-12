@@ -195,7 +195,7 @@ class SimpleAssistant(Assistant):
         # We keep continue hitting OpenAI API until there are no more tool calls.
         if self._toolkit:
             while message.tool_calls:
-                tool_calls = self._toolkit.handle_tool_calls(message.tool_calls)
+                tool_calls = await self._toolkit.handle_tool_calls(message.tool_calls)
                 messages.extend(tool_calls)
 
                 message = await self._complete(messages, chat)
@@ -235,7 +235,7 @@ class SimpleAssistant(Assistant):
         async with self._client.beta.chat.completions.stream(
             model=os.environ["OPENAI_MODEL"],
             messages=messages,
-            **self._tool_kwargs(),
+            **await self._tool_kwargs(),
         ) as stream:
             async for event in stream:
                 match event:  # https://github.com/openai/openai-python/blob/main/helpers.md#chat-completions-events
@@ -266,10 +266,10 @@ class SimpleAssistant(Assistant):
 
         raise Exception("Stream ended unexpectedly")
 
-    def _tool_kwargs(self) -> dict[str, Any]:
+    async def _tool_kwargs(self) -> dict[str, Any]:
         if not self._toolkit:
             return {}
-        tools = self._toolkit.get_tools()
+        tools = await self._toolkit.get_tools()
         if not tools:
             return {}
         return {"tools": tools, "tool_choice": "auto", "parallel_tool_calls": False}

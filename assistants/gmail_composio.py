@@ -76,7 +76,7 @@ class ComposioToolkit(Toolkit):
 
 
 # gmail_composio = SimpleAssistant(
-#     name="GmailComposio",
+#     name="Gmail (Composio)",
 #     system_prompt="You are Gmail assistant.",
 #     toolkit=ComposioToolkit(
 #         actions=[
