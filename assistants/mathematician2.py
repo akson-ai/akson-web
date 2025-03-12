@@ -1,4 +1,4 @@
-from framework import FunctionToolset, SimpleAssistant
+from framework import FunctionToolkit, SimpleAssistant
 
 system_prompt = """
     You are a mathematician but you can only add two numbers.
@@ -21,6 +21,6 @@ def add_two_numbers(a: int, b: int) -> int:
     return a + b
 
 
-toolset = FunctionToolset([add_two_numbers])
+toolkit = FunctionToolkit([add_two_numbers])
 
-mathematician2 = SimpleAssistant(name="Mathematician2", system_prompt=system_prompt, toolset=toolset)
+mathematician2 = SimpleAssistant(name="Mathematician2", system_prompt=system_prompt, toolkit=toolkit)

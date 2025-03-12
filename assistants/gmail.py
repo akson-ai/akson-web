@@ -7,20 +7,20 @@ from openai.types.chat import (
     ParsedFunctionToolCall,
 )
 
-from framework import SimpleAssistant, Toolset
+from framework import SimpleAssistant, Toolkit
 from logger import logger
 
 
-class ComposioToolset(Toolset):
+class ComposioToolkit(Toolkit):
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
-        self.toolset = ComposioToolSet()
+        self.toolkit = ComposioToolSet()
 
     def get_tools(self) -> list[ChatCompletionToolParam]:
         logger.info("Getting tools...")
         # print(f"args: {self.args}, kwargs: {self.kwargs}")
-        tools = self.toolset.get_tools(*self.args, **self.kwargs)
+        tools = self.toolkit.get_tools(*self.args, **self.kwargs)
         logger.info(f"Got {len(tools)} tools.")
         for tool in tools:
             tool["function"]["strict"] = True
@@ -62,7 +62,7 @@ class ComposioToolset(Toolset):
         output = []
         for tool_call in tool_calls:
             print(f"Executing tool call: {tool_call}")
-            result = self.toolset.execute_tool_call(tool_call=tool_call)
+            result = self.toolkit.execute_tool_call(tool_call=tool_call)
             print(f"Result: {result}")
             assert result["successful"]
             output.append(
@@ -78,7 +78,7 @@ class ComposioToolset(Toolset):
 # gmail_composio = SimpleAssistant(
 #     name="GmailComposio",
 #     system_prompt="You are Gmail assistant.",
-#     toolset=ComposioToolset(
+#     toolkit=ComposioToolkit(
 #         actions=[
 #             "GMAIL_GET_PROFILE",
 #             "GMAIL_LIST_THREADS",

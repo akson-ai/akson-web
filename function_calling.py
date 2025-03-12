@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, create_model
 from logger import logger
 
 
-class Toolset(ABC):
+class Toolkit(ABC):
 
     @abstractmethod
     def get_tools(self) -> list[ChatCompletionToolParam]: ...
@@ -24,7 +24,7 @@ class Toolset(ABC):
     def handle_tool_calls(self, tool_calls: list[ParsedFunctionToolCall]) -> list[ChatCompletionToolMessageParam]: ...
 
 
-class FunctionToolset(Toolset):
+class FunctionToolkit(Toolkit):
     """Manages the list of tools to be passed into completion reqeust."""
 
     def __init__(self, functions: list[Callable]) -> None:

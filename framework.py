@@ -27,7 +27,7 @@ from openai.types.chat.chat_completion_message_tool_call_param import Function
 from pydantic import BaseModel
 from starlette.requests import ClientDisconnect
 
-from function_calling import FunctionToolset, Toolset
+from function_calling import FunctionToolkit, Toolkit
 from logger import logger
 
 MessageCategory = Literal["info", "success", "warning", "error"]
@@ -172,11 +172,11 @@ class Assistant(ABC):
 class SimpleAssistant(Assistant):
     """Simple assistant that uses OpenAI's chat API to generate responses."""
 
-    def __init__(self, name: str, system_prompt: str, toolset: Optional[Toolset] = None):
+    def __init__(self, name: str, system_prompt: str, toolkit: Optional[Toolkit] = None):
         self.system_prompt = system_prompt
         self._name = name
         self._client = AsyncOpenAI()
-        self._toolset = toolset
+        self._toolkit = toolkit
 
     @property
     def name(self) -> str:
@@ -193,9 +193,9 @@ class SimpleAssistant(Assistant):
         messages.append(_convert_assistant_message(message))
 
         # We keep continue hitting OpenAI API until there are no more tool calls.
-        if self._toolset:
+        if self._toolkit:
             while message.tool_calls:
-                tool_calls = self._toolset.handle_tool_calls(message.tool_calls)
+                tool_calls = self._toolkit.handle_tool_calls(message.tool_calls)
                 messages.extend(tool_calls)
 
                 message = await self._complete(messages, chat)
@@ -267,9 +267,9 @@ class SimpleAssistant(Assistant):
         raise Exception("Stream ended unexpectedly")
 
     def _tool_kwargs(self) -> dict[str, Any]:
-        if not self._toolset:
+        if not self._toolkit:
             return {}
-        tools = self._toolset.get_tools()
+        tools = self._toolkit.get_tools()
         if not tools:
             return {}
         return {"tools": tools, "tool_choice": "auto", "parallel_tool_calls": False}
@@ -312,8 +312,8 @@ class DeclarativeAssistant(SimpleAssistant):
         name = self.__class__.__name__
         system_prompt = self.__doc__ or ""
         functions = [getattr(self, name) for name, func in self.__class__.__dict__.items() if callable(func)]
-        toolset = FunctionToolset(functions)
-        super().__init__(name, system_prompt, toolset)
+        toolkit = FunctionToolkit(functions)
+        super().__init__(name, system_prompt, toolkit)
 
 
 # TODO put back StructuredOutput as assistants
