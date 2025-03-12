@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -227,6 +228,8 @@ class SimpleAssistant(Assistant):
     async def _complete(self, messages: list[ChatCompletionMessageParam], chat: Chat) -> ParsedChatCompletionMessage:
         logger.info("Completing chat")
         for message in messages:
+            if "name" in message:
+                message["name"] = re.sub(r"[^a-zA-Z0-9_-]", "_", message["name"])
             logger.debug(message)
 
         # Because we're streaming, we need to track whether a message has started or not.
