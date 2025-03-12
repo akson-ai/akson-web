@@ -16,6 +16,7 @@ from framework import Assistant, Chat, ChatState, Message
 from loader import load_assistants
 from logger import logger
 
+# TODO save tool calls as openai format in messages
 # TODO write an email assistant
 # TODO write news assistant
 # TODO think about how to convert assistants to agents
