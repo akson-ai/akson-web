@@ -428,7 +428,7 @@ function ChatContent({ chatId, abortControllerRef }) {
         </div>
       </div>
 
-      <div className="flex flex-col max-w-prose mx-auto h-[calc(100vh-64px)] w-full">
+      <div className="flex flex-col max-w-5xl mx-auto h-[calc(100vh-64px)] w-full">
         {error && (
           <div className="alert alert-error shadow-lg m-4">
             <div>
