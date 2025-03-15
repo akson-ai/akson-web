@@ -5,6 +5,8 @@
 // TODO highlight code blocks
 // TODO fix jumping to button when streaming
 // TODO ask confirmation when deleting single message
+// TODO add "trim history" button
+// TODO add "summarize history" button
 
 import React from 'react';
 import {createRoot} from 'react-dom/client';
