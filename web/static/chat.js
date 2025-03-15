@@ -14,16 +14,6 @@ import {Button, Input, ChatBubble} from 'react-daisyui';
 function ChatMessage({ id, role, name, content, category, onDelete }) {
   const [isHovered, setIsHovered] = React.useState(false);
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(content)
-      .then(() => {
-        showToast('Copied to clipboard!');
-      })
-      .catch(err => {
-        console.error('Failed to copy message: ', err);
-      });
-  };
-
   return (
     <ChatBubble end={role === 'user'}
       onMouseEnter={() => setIsHovered(true)}
@@ -49,7 +39,7 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
       </ChatBubble.Message>
       {content && (
         <ChatBubble.Footer className={`mt-1 ${isHovered ? 'visible' : 'invisible'}`}>
-          <Button size="xs" color="ghost" shape="square" title="Copy message" onClick={copyToClipboard}>
+          <Button size="xs" color="ghost" shape="square" title="Copy message" onClick={() => navigator.clipboard.writeText(content)}>
             <i className="fas fa-copy"></i>
           </Button>
           <Button size="xs" color="ghost" shape="square" title="Delete message" onClick={() => onDelete(id)}>
@@ -591,20 +581,6 @@ function ChatApp() {
       </div>
     </>
   );
-}
-
-// Utility function to show toast notifications
-function showToast(message, duration = 3000) {
-  const toast = document.getElementById('toast');
-  const toastContent = document.getElementById('toast-content');
-
-  if (toast && toastContent) {
-    toastContent.textContent = message;
-    toast.classList.remove('hidden');
-    setTimeout(() => {
-      toast.classList.add('hidden');
-    }, duration);
-  }
 }
 
 // Render your app
