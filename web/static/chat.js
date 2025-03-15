@@ -4,7 +4,6 @@
 // TODO when new chat is persisted, reload chat history
 // TODO highlight code blocks
 // TODO fix jumping to button when streaming
-// TODO ask confirmation when deleting single message
 // TODO add "trim history" button
 // TODO add "summarize history" button
 
@@ -373,6 +372,11 @@ function ChatContent({ chatId, abortControllerRef }) {
   };
 
   const deleteMessage = (messageId) => {
+    // Ask for confirmation before deleting
+    if (!confirm('Are you sure you want to delete this message?')) {
+      return;
+    }
+    
     // Optimistically update UI
     const newMessages = messages.filter(msg => msg.id !== messageId);
     setMessages(newMessages);
