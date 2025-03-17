@@ -10,36 +10,37 @@
 
 import React from 'react';
 import {createRoot} from 'react-dom/client';
-import {Button, Input, ChatBubble} from 'react-daisyui';
+import {Button, Input} from 'react-daisyui';
 
 function ChatMessage({ id, role, name, content, category, onDelete }) {
   const [isHovered, setIsHovered] = React.useState(false);
 
   return (
-    <ChatBubble end={role === 'user'}
+    <div
+      className={`chat ${role === 'user' ? 'chat-end' : 'chat-start'}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <ChatBubble.Avatar>
+      <div className="chat-image avatar">
         <div className="w-10 rounded-full bg-base-300 place-content-center">
           <div className="text-2xl place-self-center">
             {role === 'user' ? '👤' : '🤖'}
           </div>
         </div>
-      </ChatBubble.Avatar>
-      <ChatBubble.Header>
+      </div>
+      <div className="chat-header">
         <time className="text-xs opacity-50">{name}</time>
-      </ChatBubble.Header>
-      <ChatBubble.Message color={category} className={`mt-1 whitespace-pre-wrap`}>
+      </div>
+      <div className={`chat-bubble mt-1 ${category ? `chat-bubble-${category}` : ''} whitespace-pre-wrap`}>
         {!content ? (
           <div className="flex items-center">
             <div className="loading loading-spinner loading-sm mr-2"></div>
             <span>Thinking...</span>
           </div>
         ) : content}
-      </ChatBubble.Message>
+      </div>
       {content && (
-        <ChatBubble.Footer className={`mt-1 ${isHovered ? 'visible' : 'invisible'}`}>
+        <div className={`chat-footer mt-1 ${isHovered ? 'visible' : 'invisible'}`}>
           <>
             <button
               className="btn btn-xs btn-ghost btn-square"
@@ -56,9 +57,9 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
               <i className="fas fa-trash"></i>
             </button>
           </>
-        </ChatBubble.Footer>
+        </div>
       )}
-    </ChatBubble>
+    </div>
   );
 }
 
