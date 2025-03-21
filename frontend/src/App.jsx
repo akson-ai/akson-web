@@ -13,6 +13,14 @@ import './App.css'
 
 const API_BASE_URL = 'http://localhost:8000';
 
+// Redirect from root path to /chat with a new UUID
+// or generate new UUID if at /chat without ID
+if (window.location.pathname === '/' ||
+    (window.location.pathname === '/chat' && !new URLSearchParams(window.location.search).get('id'))) {
+  const newId = crypto.randomUUID();
+  window.location.href = `/chat?id=${newId}`;
+}
+
 function ChatMessage({ id, role, name, content, category, onDelete }) {
   const [isHovered, setIsHovered] = useState(false);
 
