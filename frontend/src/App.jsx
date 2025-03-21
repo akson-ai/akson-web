@@ -279,10 +279,13 @@ function ChatContent({ chatId, abortControllerRef }) {
       } else if (data.type === 'add_chunk') {
         // Append chunk to the last message
         setMessages(prev => {
-          const newMessages = [...prev];
-          const lastMessage = newMessages[newMessages.length - 1];
-          lastMessage.content += data.chunk;
-          return newMessages;
+          const updated = [...prev];
+          const i = updated.length - 1;
+          updated[i] = {
+            ...updated[i],
+            content: updated[i].content + data.chunk
+          };
+          return updated;
         });
       } else if (data.type === 'end_message') {
         // TODO handle end_message in web app
