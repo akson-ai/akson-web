@@ -3,7 +3,8 @@ import ChatMessage from './ChatMessage';
 
 const API_BASE_URL = 'http://localhost:8000';
 
-function ChatContent({ chatId, abortControllerRef }) {
+function ChatContent({ chatId }) {
+  const abortControllerRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [assistants, setAssistants] = useState([]);
@@ -102,22 +103,28 @@ function ChatContent({ chatId, abortControllerRef }) {
     };
   }, []);
 
-  // Add a separate useEffect for the focus input shortcut
+  // Add a separate useEffect for keyboard shortcuts
   useEffect(() => {
-    const handleFocusInputShortcut = (e) => {
-      // Check for Shift+Esc
+    const handleKeyboardShortcuts = (e) => {
+      // Check for Shift+Esc to focus input
       if (e.shiftKey && e.key === 'Escape') {
         e.preventDefault();
         if (messageInputRef.current) {
           messageInputRef.current.focus();
         }
       }
+      
+      // Check for Escape to abort current request
+      if (e.key === 'Escape' && abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
     };
 
-    window.addEventListener('keydown', handleFocusInputShortcut);
+    window.addEventListener('keydown', handleKeyboardShortcuts);
 
     return () => {
-      window.removeEventListener('keydown', handleFocusInputShortcut);
+      window.removeEventListener('keydown', handleKeyboardShortcuts);
     };
   }, []);
 

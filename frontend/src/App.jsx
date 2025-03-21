@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import './App.css';
 import Drawer from './components/Drawer';
 import ChatContent from './components/ChatContent';
@@ -20,18 +20,11 @@ if (window.location.pathname === '/' ||
 }
 
 function App() {
-  const abortControllerRef = useRef(null);
-
   const urlParams = new URLSearchParams(window.location.search);
   const chatId = urlParams.get('id');
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-
       // Add shortcut for keyboard shortcuts modal
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
         e.preventDefault();
@@ -46,7 +39,7 @@ function App() {
   return (
     <>
       <Drawer chatId={chatId}>
-        <ChatContent chatId={chatId} abortControllerRef={abortControllerRef} />
+        <ChatContent chatId={chatId} />
       </Drawer>
 
       <KeyboardShortcutsModal />
