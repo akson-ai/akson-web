@@ -10,7 +10,6 @@ import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 // TODO fix jumping to button when streaming
 // TODO add "trim history" button
 // TODO add "summarize history" button
-// TODO ask confirmation when deleting single message
 
 // Redirect from root path to /chat with a new UUID
 // or generate new UUID if at /chat without ID
