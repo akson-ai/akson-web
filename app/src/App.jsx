@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
+// TODO allow editing of messages
+// TODO allow forking of chats
+// TODO handle markdown in message
+// TODO when new chat is persisted, reload chat history
+// TODO highlight code blocks
+// TODO fix jumping to button when streaming
+// TODO add "trim history" button
+// TODO add "summarize history" button
+// TODO ask confirmation when deleting single message
+
 const API_BASE_URL = 'http://localhost:8000';
 
 function ChatMessage({ id, role, name, content, category, onDelete }) {
