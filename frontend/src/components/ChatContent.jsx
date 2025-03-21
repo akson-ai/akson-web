@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
-
-const API_BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL } from '../constants';
 
 function ChatContent({ chatId }) {
   const abortControllerRef = useRef(null);
