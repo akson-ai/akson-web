@@ -1,14 +1,22 @@
 services:
-  crowd:
-    build: .
+  backend:
+    build: ./backend
     develop:
       watch:
-        - action: sync
-          path: .
+        - path: ./backend
+          action: sync
           target: /app
     ports:
-      - ${CROWD_PORT:-8000}:8000
-    volumes:
-      - ${AGENTS_DIR:-./agents}:/agents
+      - 8000:8000
     env_file:
       - .env
+
+  frontend:
+    build: ./frontend
+    develop:
+      watch:
+        - path: ./frontend
+          action: sync
+          target: /app
+    ports:
+      - 5173:5173
