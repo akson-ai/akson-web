@@ -1,12 +1,12 @@
 import json
 import os
 import subprocess
-import threading
 import uuid
 from datetime import datetime
 
 from dotenv import load_dotenv
 from fastapi import Body, Depends, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -57,6 +57,13 @@ def _get_chat(chat_id: str) -> Chat:
 
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/", include_in_schema=False)
