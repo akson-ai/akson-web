@@ -126,6 +126,7 @@ function Sidebar({ chatId }) {
     <div className="bg-base-200 w-80 h-full flex flex-col">
       <div className="p-4">
         <input
+          id="search-chats"
           type="text"
           placeholder="Search chats..."
           className="input input-bordered w-full"
@@ -416,6 +417,7 @@ function ChatContent({ chatId, abortControllerRef }) {
         </div>
         <div className="navbar-center">
           <select
+            id="assistant-select"
             className="select select-bordered w-full max-w-xs"
             value={selectedAssistant}
             onChange={(e) => {
