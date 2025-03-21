@@ -1,14 +1,10 @@
 import json
 import os
-import subprocess
-import uuid
 from datetime import datetime
 
 from dotenv import load_dotenv
 from fastapi import Body, Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sse_starlette.event import ServerSentEvent
 from sse_starlette.sse import EventSourceResponse
@@ -64,20 +60,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.get("/", include_in_schema=False)
-async def index():
-    """Redirect to the chat app."""
-    return RedirectResponse(f"/chat")
-
-
-@app.get("/chat", include_in_schema=False)
-async def get_chat_app(id: str | None = None):
-    """Serve the chat web app."""
-    if not id:
-        return RedirectResponse(f"/chat?id={uuid.uuid4()}")
-    return FileResponse("web/chat.html")
 
 
 class AssistantModel(BaseModel):
@@ -225,34 +207,3 @@ async def get_events(chat: Chat = Depends(_get_chat)):
             yield ServerSentEvent(json.dumps(message))
 
     return EventSourceResponse(generate_events())
-
-
-# Function to run the Vite dev server
-def run_vite_server():
-    # Run npm command in the Vite directory without changing process working directory
-    vite_process = subprocess.Popen(
-        "npm run dev",
-        shell=True,
-        cwd="app",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True,
-        bufsize=1,
-    )
-
-    # Print Vite output
-    assert vite_process.stdout
-    for line in vite_process.stdout:
-        print(f"[VITE] {line.strip()}")
-
-    return vite_process
-
-
-# # Start Vite server in a thread
-# vite_thread = threading.Thread(target=run_vite_server)
-# vite_thread.daemon = True  # This ensures the thread will exit when the main program exits
-# vite_thread.start()
-
-
-# Must be mounted after above handlers
-app.mount("/", StaticFiles(directory="web/static"))
