@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
+import Markdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 // TODO allow editing of messages
 // TODO allow forking of chats
-// TODO handle markdown in message
 // TODO when new chat is persisted, reload chat history
-// TODO highlight code blocks
 // TODO fix jumping to button when streaming
 // TODO add "trim history" button
 // TODO add "summarize history" button
@@ -40,13 +41,38 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
       <div className="chat-header">
         <time className="text-xs opacity-50">{name}</time>
       </div>
-      <div className={`chat-bubble mt-1 ${category ? `chat-bubble-${category}` : ''} whitespace-pre-wrap`}>
+      <div className={`chat-bubble mt-1 ${category ? `chat-bubble-${category}` : ''}`}>
         {!content ? (
           <div className="flex items-center">
             <div className="loading loading-spinner loading-sm mr-2"></div>
             <span>Thinking...</span>
           </div>
-        ) : content}
+        ) : (
+          <div className="prose">
+            <Markdown
+              components={{
+                code({node, className, children, ...props}) {
+                  const match = /language-(\w+)/.exec(className || '')
+                  return match ? (
+                    <SyntaxHighlighter
+                      style={vscDarkPlus}
+                      language={match[1]}
+                      {...props}
+                    >
+                      {String(children).replace(/\n$/, '')}
+                    </SyntaxHighlighter>
+                  ) : (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  )
+                }
+              }}
+            >
+              {content}
+            </Markdown>
+          </div>
+        )}
       </div>
       {content && (
         <div className={`chat-footer mt-1 ${isHovered ? 'visible' : 'invisible'}`}>
