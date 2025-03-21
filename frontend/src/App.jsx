@@ -178,22 +178,28 @@ function Sidebar({ chatId }) {
 function Drawer({ children, chatId }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Add useEffect for the sidebar toggle shortcut
+  // Add useEffect for keyboard shortcuts related to the sidebar
   useEffect(() => {
-    const handleSidebarShortcut = (e) => {
-      // Check for Cmd+Shift+S (Mac) or Ctrl+Shift+S (Windows/Linux)
+    const handleKeyboardShortcuts = (e) => {
+      // Toggle sidebar with Cmd+Shift+S (Mac) or Ctrl+Shift+S (Windows/Linux)
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 's') {
         e.preventDefault();
         setSidebarOpen(prevState => !prevState);
       }
+      
+      // Close sidebar with Escape key when it's open
+      if (e.key === 'Escape' && sidebarOpen) {
+        e.preventDefault();
+        setSidebarOpen(false);
+      }
     };
 
-    window.addEventListener('keydown', handleSidebarShortcut);
+    window.addEventListener('keydown', handleKeyboardShortcuts);
 
     return () => {
-      window.removeEventListener('keydown', handleSidebarShortcut);
+      window.removeEventListener('keydown', handleKeyboardShortcuts);
     };
-  }, []);
+  }, [sidebarOpen]);
 
   return (
     <div className="drawer"> {/* The root container */}
@@ -529,16 +535,16 @@ function KeyboardShortcutsModal() {
                 <td>Toggle sidebar</td>
               </tr>
               <tr>
+                <td><kbd className="kbd kbd-sm">Esc</kbd></td>
+                <td>Close sidebar / Cancel current request</td>
+              </tr>
+              <tr>
                 <td><kbd className="kbd kbd-sm">Cmd</kbd> + <kbd className="kbd kbd-sm">Shift</kbd> + <kbd className="kbd kbd-sm">O</kbd></td>
                 <td>New chat</td>
               </tr>
               <tr>
                 <td><kbd className="kbd kbd-sm">Shift</kbd> + <kbd className="kbd kbd-sm">Esc</kbd></td>
                 <td>Focus input</td>
-              </tr>
-              <tr>
-                <td><kbd className="kbd kbd-sm">Esc</kbd></td>
-                <td>Cancel current request</td>
               </tr>
               <tr>
                 <td><kbd className="kbd kbd-sm">Cmd</kbd> + <kbd className="kbd kbd-sm">/</kbd></td>
