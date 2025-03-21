@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
 import { API_BASE_URL } from '../constants';
 
+// TODO make user input multiline
+
 function ChatContent({ chatId }) {
   const abortControllerRef = useRef(null);
   const [messages, setMessages] = useState([]);
