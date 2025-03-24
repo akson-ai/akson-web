@@ -29,6 +29,14 @@ function KeyboardShortcutsModal() {
                 <td>Focus input</td>
               </tr>
               <tr>
+                <td><kbd className="kbd kbd-sm">Enter</kbd></td>
+                <td>Send message</td>
+              </tr>
+              <tr>
+                <td><kbd className="kbd kbd-sm">Shift</kbd> + <kbd className="kbd kbd-sm">Enter</kbd></td>
+                <td>New line in message</td>
+              </tr>
+              <tr>
                 <td><kbd className="kbd kbd-sm">Cmd</kbd> + <kbd className="kbd kbd-sm">/</kbd></td>
                 <td>Show this help</td>
               </tr>

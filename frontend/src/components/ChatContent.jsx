@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
 import { API_BASE_URL } from '../constants';
 
-// TODO make user input multiline
 
 function ChatContent({ chatId }) {
   const abortControllerRef = useRef(null);
@@ -274,15 +273,24 @@ function ChatContent({ chatId }) {
           <div className="flex flex-col space-y-2">
             <label className="form-control w-full">
               <div className="flex space-x-2">
-                <input
+                <textarea
                   id="messageInput"
                   ref={messageInputRef}
-                  type="text"
-                  className="input input-bordered flex-1"
-                  placeholder="Type your message..."
+                  className="textarea textarea-bordered flex-1 min-h-12 max-h-48"
+                  placeholder="Type your message... (Shift+Enter for new line)"
                   value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                  onChange={(e) => {
+                    setInputText(e.target.value);
+                    // Auto-resize the textarea
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 192) + 'px';
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
                   autoFocus
                 />
                 <button className="btn btn-primary" onClick={sendMessage}>
