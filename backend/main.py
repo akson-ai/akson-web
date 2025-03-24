@@ -20,6 +20,7 @@ from logger import logger
 # TODO think about how to convert assistants to agents
 # TODO add more use case items
 # TODO add stateful agent
+# TODO summarize chat titles
 
 load_dotenv()
 
