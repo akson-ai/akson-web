@@ -130,6 +130,7 @@ function ChatContent({ chatId }) {
 
   useEffect(() => {
     // Scroll to bottom when messages change
+    // TODO scroll only if scrolled to the bottom
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
