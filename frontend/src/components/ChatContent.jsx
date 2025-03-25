@@ -11,6 +11,7 @@ function ChatContent({ chatId }) {
   const [selectedAssistant, setSelectedAssistant] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [scrolledToBottom, setScrolledToBottom] = useState(true);
   const chatHistoryRef = useRef(null);
   const messageInputRef = useRef(null);
 
@@ -128,13 +129,27 @@ function ChatContent({ chatId }) {
     };
   }, []);
 
+  // Add scroll event listener to track when user scrolls
   useEffect(() => {
-    // Scroll to bottom when messages change
-    // TODO scroll only if scrolled to the bottom
-    if (chatHistoryRef.current) {
+    const chatHistory = chatHistoryRef.current;
+    if (!chatHistory) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = chatHistory;
+      const isAtBottom = scrollHeight <= scrollTop + clientHeight;
+      setScrolledToBottom(isAtBottom);
+    };
+
+    chatHistory.addEventListener('scroll', handleScroll);
+    return () => chatHistory.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Scroll to bottom when messages change, but only if already at bottom
+  useEffect(() => {
+    if (chatHistoryRef.current && scrolledToBottom) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, scrolledToBottom]);
 
   const sendMessage = () => {
     if (!inputText.trim()) return;
