@@ -13,7 +13,7 @@ from openai.types.chat import (
     ParsedFunctionToolCall,
 )
 from openai.types.shared_params import FunctionDefinition
-from pydantic import BaseModel, Field, create_model
+from pydantic import Field, create_model
 
 from logger import logger
 
@@ -34,10 +34,12 @@ class FunctionToolkit(Toolkit):
 
     def __init__(self, functions: list[Callable]) -> None:
         self.functions = {f.__name__: f for f in functions}
+        self.models = {f.__name__: function_to_pydantic_model(f) for f in functions}
+        self.tools = [pydantic_function_tool(model) for model in self.models.values()]
 
     async def get_tools(self) -> list[ChatCompletionToolParam]:
         """Returns the list of tools to be passed into completion reqeust."""
-        return [pydantic_function_tool(function_to_pydantic_model(f)) for f in self.functions.values()]
+        return self.tools
 
     async def handle_tool_calls(self, tool_calls: list[ParsedFunctionToolCall]) -> list[ChatCompletionToolMessageParam]:
         """This is called each time a response is received from completion method."""
@@ -47,9 +49,10 @@ class FunctionToolkit(Toolkit):
             function = tool_call.function
             logger.info("Tool call: %s(%s)", function.name, function.parsed_arguments)
             instance = function.parsed_arguments
-            assert isinstance(instance, BaseModel)
             func = self.functions[function.name]
-            kwargs = {name: getattr(instance, name) for name in instance.model_fields}
+            model = self.models[function.name]
+            assert isinstance(instance, model)
+            kwargs = {name: getattr(instance, name) for name in model.model_fields}
 
             # Fill in default values
             for param in signature(func).parameters.values():
