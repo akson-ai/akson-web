@@ -51,8 +51,9 @@ class ChatState(BaseModel):
     """Chat that can be saved and loaded from a file."""
 
     id: str
-    assistant: str
     messages: list[Message]
+    assistant: Optional[str] = None
+    title: Optional[str] = None
 
     @classmethod
     def create_new(cls, id: str, assistant: str):
@@ -152,6 +153,30 @@ class Chat:
         if await self._request.is_disconnected():
             raise ClientDisconnect
         await self._queue.put(message)
+
+    async def _update_title(self):
+        class TitleResponse(BaseModel):
+            title: str
+
+        instructions = """
+            You are a helpful summarizer.
+            Your input is the first message of a conversation with an AI assistant.
+            Output a title for the conversation.
+        """
+        input = self.state.messages[0]["content"]
+        client = AsyncOpenAI()
+        response = await client.beta.chat.completions.parse(
+            model="gpt-4o-mini",
+            response_format=TitleResponse,
+            messages=[
+                {"role": "system", "content": instructions},
+                {"role": "user", "content": input},
+            ],
+        )
+        instance = response.choices[0].message.parsed
+        assert isinstance(instance, TitleResponse)
+        self.state.title = instance.title
+        await self._queue_message({"type": "update_title", "title": self.state.title})
 
 
 class Assistant(ABC):

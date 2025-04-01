@@ -20,7 +20,6 @@ from logger import logger
 # TODO think about how to convert assistants to agents
 # TODO add more use case items
 # TODO add stateful agent
-# TODO summarize chat titles
 
 load_dotenv()
 
@@ -91,12 +90,6 @@ async def get_chats():
             chat_id = filename[:-5]  # Remove .json extension
             try:
                 state = ChatState.load_from_disk(chat_id)
-                # Get the first few characters of the first message as the title
-                title = "Untitled Chat"
-                if state.messages and len(state.messages) > 0:
-                    first_message = state.messages[0]
-                    if first_message["role"] == "user" and first_message["content"]:
-                        title = first_message["content"][:30] + ("..." if len(first_message["content"]) > 30 else "")
 
                 # Get the last modified time of the file
                 last_updated = os.path.getmtime(ChatState.file_path(chat_id))
@@ -104,7 +97,7 @@ async def get_chats():
                 chat_files.append(
                     ChatSummary(
                         id=chat_id,
-                        title=title,
+                        title=state.title or "Untitled Chat",
                         last_updated=datetime.fromtimestamp(last_updated),
                     )
                 )
@@ -166,6 +159,11 @@ async def send_message(
         chat.state.messages.append(user_message)
 
         await assistant.run(chat)
+
+        # TODO update chat title async
+        print(len(chat.state.messages))
+        if len(chat.state.messages) == 2:
+            await chat._update_title()
     except ClientDisconnect:
         # TODO save interrupted messages
         logger.info("Client disconnected")
