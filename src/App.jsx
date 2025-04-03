@@ -52,13 +52,6 @@ function App() {
         <i className="fas fa-keyboard mr-1"></i>
         <span>⌘ + /</span>
       </div>
-
-      {/* Toast notification */}
-      <div id="toast" className="toast toast-end hidden">
-        <div className="alert alert-success">
-          <span id="toast-content"></span>
-        </div>
-      </div>
     </>
   );
 }
