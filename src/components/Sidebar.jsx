@@ -7,7 +7,7 @@ function Sidebar({ chatId }) {
   const [hoveredChatId, setHoveredChatId] = useState(null);
 
   const loadChatHistory = () => {
-    fetch(`${API_BASE_URL}/chats`)
+    fetch(`${API_BASE_URL}/chats`, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         setChatHistory(data);
@@ -35,6 +35,7 @@ function Sidebar({ chatId }) {
     if (confirm('Are you sure you want to delete this chat?')) {
       fetch(`${API_BASE_URL}/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
         .then((res) => {
           if (res.ok) {

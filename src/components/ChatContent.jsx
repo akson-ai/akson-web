@@ -24,7 +24,7 @@ function ChatContent({ chatId }) {
     setIsLoading(true);
     setError(null);
 
-    fetch(`${API_BASE_URL}/${chatId}/state`)
+    fetch(`${API_BASE_URL}/${chatId}/state`, { credentials: 'include' })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load chat state');
         return res.json();
@@ -47,7 +47,7 @@ function ChatContent({ chatId }) {
       });
 
     // Load assistants
-    fetch(`${API_BASE_URL}/assistants`)
+    fetch(`${API_BASE_URL}/assistants`, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         setAssistants(data);
@@ -57,7 +57,7 @@ function ChatContent({ chatId }) {
       });
 
     // Set up SSE listener
-    const eventSource = new EventSource(`${API_BASE_URL}/${chatId}/events`);
+    const eventSource = new EventSource(`${API_BASE_URL}/${chatId}/events`, { withCredentials: true });
     eventSource.onmessage = function(event) {
       const data = JSON.parse(event.data);
       console.log(data)
@@ -171,6 +171,7 @@ function ChatContent({ chatId }) {
     fetch(`${API_BASE_URL}/${chatId}/message`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         id: messageId,
         content: inputText,
@@ -201,6 +202,7 @@ function ChatContent({ chatId }) {
     // Send delete request to backend
     fetch(`${API_BASE_URL}/${chatId}/message/${messageId}`, {
       method: 'DELETE',
+      credentials: 'include',
     })
     .then(response => {
       if (!response.ok) {
@@ -235,6 +237,7 @@ function ChatContent({ chatId }) {
               setSelectedAssistant(assistant);
               fetch(`${API_BASE_URL}/${chatId}/assistant`, {
                 method: 'PUT',
+                credentials: 'include',
                 body: assistant,
               });
               document.getElementById('messageInput').focus();
