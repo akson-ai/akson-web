@@ -1,61 +1,74 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSuspenseQuery, useMutation } from '@tanstack/react-query'
 import ChatMessage from './ChatMessage';
 import { API_BASE_URL } from '../constants';
+
 
 
 function ChatContent({ chatId }) {
   const abortControllerRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [assistants, setAssistants] = useState([]);
-  const [selectedAssistant, setSelectedAssistant] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [selectedAssistant, setSelectedAssistant] = useState(undefined);
   const [scrolledToBottom, setScrolledToBottom] = useState(true);
   const chatHistoryRef = useRef(null);
   const messageInputRef = useRef(null);
+
+  const { data: assistants } = useSuspenseQuery({
+    queryKey: ['assistants'],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/assistants`, { credentials: 'include' });
+      return await response.json();
+    }
+  });
+
+  // TODO set page title from state
+  const { data: state } = useSuspenseQuery({
+    queryKey: ['state', chatId],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/${chatId}/state`, { credentials: 'include' });
+      return await response.json();
+    },
+  });
+
+  useEffect(() => {
+    setSelectedAssistant(state.assistant);
+    setMessages(state.messages.map(msg => ({
+      id: msg.id,
+      role: msg.role,
+      name: msg.name,
+      content: msg.content,
+      category: msg.category,
+    })));
+  }, [state]);
+
+  const updateAssistant = useMutation({
+    mutationFn: async (assistant) => {
+      await fetch(`${API_BASE_URL}/${chatId}/assistant`, {
+        method: 'PUT',
+        credentials: 'include',
+        body: assistant,
+      });
+    },
+  });
+
+  const sendMessageQuery = useMutation({
+    mutationFn: async (message) => {
+      await fetch(`${API_BASE_URL}/${chatId}/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(message),
+        signal: abortControllerRef.current.signal,
+      });
+    },
+  })
 
   const createNewChat = () => {
     window.location.href = '/chat';
   };
 
   useEffect(() => {
-    // Load chat state
-    setIsLoading(true);
-    setError(null);
-
-    fetch(`${API_BASE_URL}/${chatId}/state`, { credentials: 'include' })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to load chat state');
-        return res.json();
-      })
-      .then((state) => {
-        setSelectedAssistant(state.assistant);
-        setMessages(state.messages.map(msg => ({
-          id: msg.id,
-          role: msg.role,
-          name: msg.name,
-          content: msg.content,
-          category: msg.category,
-        })));
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error('Error loading chat state:', err);
-        setError('Failed to load chat. Please try again.');
-        setIsLoading(false);
-      });
-
-    // Load assistants
-    fetch(`${API_BASE_URL}/assistants`, { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        setAssistants(data);
-        if (data.length > 0) {
-          setSelectedAssistant(data[0].name);
-        }
-      });
-
     // Set up SSE listener
     const eventSource = new EventSource(`${API_BASE_URL}/${chatId}/events`, { withCredentials: true });
     eventSource.onmessage = function(event) {
@@ -168,22 +181,10 @@ function ChatContent({ chatId }) {
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
 
-    fetch(`${API_BASE_URL}/${chatId}/message`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        id: messageId,
-        content: inputText,
-        assistant: selectedAssistant,
-      }),
-      signal: abortControllerRef.current.signal,
-    }).catch(err => {
-      if (err.name === 'AbortError') {
-        console.log('Request cancelled');
-      } else {
-        console.error('Error:', err);
-      }
+    sendMessageQuery.mutate({
+      id: messageId,
+      content: inputText,
+      assistant: selectedAssistant,
     });
 
     setInputText('');
@@ -235,11 +236,7 @@ function ChatContent({ chatId }) {
             onChange={(e) => {
               const assistant = e.target.value;
               setSelectedAssistant(assistant);
-              fetch(`${API_BASE_URL}/${chatId}/assistant`, {
-                method: 'PUT',
-                credentials: 'include',
-                body: assistant,
-              });
+              updateAssistant.mutate(assistant);
               document.getElementById('messageInput').focus();
             }}
           >
@@ -260,21 +257,8 @@ function ChatContent({ chatId }) {
       </div>
 
       <div className="flex flex-col max-w-5xl mx-auto h-[calc(100vh-64px)] w-full">
-        {error && (
-          <div className="alert alert-error shadow-lg m-4">
-            <div>
-              <i className="fas fa-exclamation-circle"></i>
-              <span>{error}</span>
-            </div>
-          </div>
-        )}
-
         <div id="chatHistory" className="p-4 overflow-y-auto flex-grow" ref={chatHistoryRef}>
-          {isLoading ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="loading loading-spinner loading-lg"></div>
-            </div>
-          ) : (
+          {
             messages.map((msg) => (
               <ChatMessage
                 id={msg.id}
@@ -286,7 +270,7 @@ function ChatContent({ chatId }) {
                 onDelete={deleteMessage}
               />
             ))
-          )}
+          }
         </div>
         <div id="chatControls" className="flex flex-col mt-auto p-4 space-y-2">
           <div className="flex flex-col space-y-2">

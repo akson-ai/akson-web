@@ -1,4 +1,8 @@
 import { useEffect } from 'react';
+import {
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query'
 import './App.css';
 import Drawer from './components/Drawer';
 import ChatContent from './components/ChatContent';
@@ -20,6 +24,8 @@ if (window.location.pathname === '/' ||
   window.location.href = `/chat?id=${newId}`;
 }
 
+const queryClient = new QueryClient()
+
 function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const chatId = urlParams.get('id');
@@ -38,7 +44,7 @@ function App() {
   }, []);
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Drawer chatId={chatId}>
         <ChatContent chatId={chatId} />
       </Drawer>
@@ -53,7 +59,7 @@ function App() {
         <i className="fas fa-keyboard mr-1"></i>
         <span>⌘ + /</span>
       </div>
-    </>
+    </QueryClientProvider>
   );
 }
 
