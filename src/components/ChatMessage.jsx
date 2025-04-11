@@ -32,7 +32,7 @@ function ChatMessage({ id, role, name, content, category, onDelete }) {
           <div className="prose">
             <Markdown
               components={{
-                code({node, className, children, ...props}) {
+                code({className, children, ...props}) {
                   const match = /language-(\w+)/.exec(className || '')
                   return match ? (
                     <SyntaxHighlighter
