@@ -6,16 +6,7 @@ function Sidebar({ chatId }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [hoveredChatId, setHoveredChatId] = useState(null);
   const queryClient = useQueryClient();
-
-  const { data: chatHistory = [] } = useQuery({
-    queryKey: ["chats"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/chats`, {
-        credentials: "include",
-      });
-      return res.json();
-    },
-  });
+  const { data: chatHistory = [] } = useQuery({ queryKey: ["chats"] });
 
   const deleteChatMutation = useMutation({
     mutationFn: async (id) => {

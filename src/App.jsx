@@ -4,6 +4,7 @@ import "./App.css";
 import Drawer from "./components/Drawer";
 import ChatContent from "./components/ChatContent";
 import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
+import { API_BASE_URL } from "./constants";
 
 // TODO allow editing of messages
 // TODO allow forking of chats
@@ -24,7 +25,21 @@ if (
   window.location.href = `/chat?id=${newId}`;
 }
 
-const queryClient = new QueryClient();
+const defaultQueryFn = async ({ queryKey }) => {
+  const endpoint = queryKey.join("/");
+  const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+    credentials: "include",
+  });
+  return await response.json();
+};
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryFn: defaultQueryFn,
+    },
+  },
+});
 
 function App() {
   const urlParams = new URLSearchParams(window.location.search);

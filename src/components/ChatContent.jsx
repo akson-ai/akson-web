@@ -11,26 +11,8 @@ function ChatContent({ chatId }) {
   const [scrolledToBottom, setScrolledToBottom] = useState(true);
   const chatHistoryRef = useRef(null);
   const messageInputRef = useRef(null);
-
-  const { data: assistants } = useSuspenseQuery({
-    queryKey: ["assistants"],
-    queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/assistants`, {
-        credentials: "include",
-      });
-      return await response.json();
-    },
-  });
-
-  const { data: state } = useSuspenseQuery({
-    queryKey: ["state", chatId],
-    queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/${chatId}/state`, {
-        credentials: "include",
-      });
-      return await response.json();
-    },
-  });
+  const { data: assistants } = useSuspenseQuery({ queryKey: ["assistants"] });
+  const { data: state } = useSuspenseQuery({ queryKey: [chatId, "state"] });
 
   useEffect(() => {
     document.title = state.title;
