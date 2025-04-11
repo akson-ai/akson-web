@@ -42,7 +42,7 @@ function ChatContent({ chatId }) {
     })));
   }, [state]);
 
-  const updateAssistant = useMutation({
+  const updateAssistantMutation = useMutation({
     mutationFn: async (assistant) => {
       await fetch(`${API_BASE_URL}/${chatId}/assistant`, {
         method: 'PUT',
@@ -52,7 +52,7 @@ function ChatContent({ chatId }) {
     },
   });
 
-  const sendMessageQuery = useMutation({
+  const sendMessageMutation = useMutation({
     mutationFn: async (message) => {
       await fetch(`${API_BASE_URL}/${chatId}/message`, {
         method: 'POST',
@@ -193,7 +193,7 @@ function ChatContent({ chatId }) {
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
 
-    sendMessageQuery.mutate({
+    sendMessageMutation.mutate({
       id: messageId,
       content: inputText,
       assistant: selectedAssistant,
@@ -227,7 +227,7 @@ function ChatContent({ chatId }) {
             onChange={(e) => {
               const assistant = e.target.value;
               setSelectedAssistant(assistant);
-              updateAssistant.mutate(assistant);
+              updateAssistantMutation.mutate(assistant);
               document.getElementById('messageInput').focus();
             }}
           >
