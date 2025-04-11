@@ -13,31 +13,52 @@ function KeyboardShortcutsModal() {
             </thead>
             <tbody>
               <tr>
-                <td><kbd className="kbd kbd-sm">Cmd</kbd> + <kbd className="kbd kbd-sm">Shift</kbd> + <kbd className="kbd kbd-sm">S</kbd></td>
+                <td>
+                  <kbd className="kbd kbd-sm">Cmd</kbd> +{" "}
+                  <kbd className="kbd kbd-sm">Shift</kbd> +{" "}
+                  <kbd className="kbd kbd-sm">S</kbd>
+                </td>
                 <td>Toggle sidebar</td>
               </tr>
               <tr>
-                <td><kbd className="kbd kbd-sm">Esc</kbd></td>
+                <td>
+                  <kbd className="kbd kbd-sm">Esc</kbd>
+                </td>
                 <td>Close sidebar / Cancel current request</td>
               </tr>
               <tr>
-                <td><kbd className="kbd kbd-sm">Cmd</kbd> + <kbd className="kbd kbd-sm">Shift</kbd> + <kbd className="kbd kbd-sm">O</kbd></td>
+                <td>
+                  <kbd className="kbd kbd-sm">Cmd</kbd> +{" "}
+                  <kbd className="kbd kbd-sm">Shift</kbd> +{" "}
+                  <kbd className="kbd kbd-sm">O</kbd>
+                </td>
                 <td>New chat</td>
               </tr>
               <tr>
-                <td><kbd className="kbd kbd-sm">Shift</kbd> + <kbd className="kbd kbd-sm">Esc</kbd></td>
+                <td>
+                  <kbd className="kbd kbd-sm">Shift</kbd> +{" "}
+                  <kbd className="kbd kbd-sm">Esc</kbd>
+                </td>
                 <td>Focus input</td>
               </tr>
               <tr>
-                <td><kbd className="kbd kbd-sm">Enter</kbd></td>
+                <td>
+                  <kbd className="kbd kbd-sm">Enter</kbd>
+                </td>
                 <td>Send message</td>
               </tr>
               <tr>
-                <td><kbd className="kbd kbd-sm">Shift</kbd> + <kbd className="kbd kbd-sm">Enter</kbd></td>
+                <td>
+                  <kbd className="kbd kbd-sm">Shift</kbd> +{" "}
+                  <kbd className="kbd kbd-sm">Enter</kbd>
+                </td>
                 <td>New line in message</td>
               </tr>
               <tr>
-                <td><kbd className="kbd kbd-sm">Cmd</kbd> + <kbd className="kbd kbd-sm">/</kbd></td>
+                <td>
+                  <kbd className="kbd kbd-sm">Cmd</kbd> +{" "}
+                  <kbd className="kbd kbd-sm">/</kbd>
+                </td>
                 <td>Show this help</td>
               </tr>
             </tbody>

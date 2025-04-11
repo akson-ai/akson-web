@@ -1,30 +1,33 @@
-import { useState, useEffect, useRef } from 'react';
-import { useSuspenseQuery, useMutation } from '@tanstack/react-query'
-import ChatMessage from './ChatMessage';
-import { API_BASE_URL } from '../constants';
-
+import { useState, useEffect, useRef } from "react";
+import { useSuspenseQuery, useMutation } from "@tanstack/react-query";
+import ChatMessage from "./ChatMessage";
+import { API_BASE_URL } from "../constants";
 
 function ChatContent({ chatId }) {
   const abortControllerRef = useRef(null);
   const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [selectedAssistant, setSelectedAssistant] = useState(undefined);
   const [scrolledToBottom, setScrolledToBottom] = useState(true);
   const chatHistoryRef = useRef(null);
   const messageInputRef = useRef(null);
 
   const { data: assistants } = useSuspenseQuery({
-    queryKey: ['assistants'],
+    queryKey: ["assistants"],
     queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/assistants`, { credentials: 'include' });
+      const response = await fetch(`${API_BASE_URL}/assistants`, {
+        credentials: "include",
+      });
       return await response.json();
-    }
+    },
   });
 
   const { data: state } = useSuspenseQuery({
-    queryKey: ['state', chatId],
+    queryKey: ["state", chatId],
     queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/${chatId}/state`, { credentials: 'include' });
+      const response = await fetch(`${API_BASE_URL}/${chatId}/state`, {
+        credentials: "include",
+      });
       return await response.json();
     },
   });
@@ -32,20 +35,22 @@ function ChatContent({ chatId }) {
   useEffect(() => {
     document.title = state.title;
     setSelectedAssistant(state.assistant);
-    setMessages(state.messages.map(msg => ({
-      id: msg.id,
-      role: msg.role,
-      name: msg.name,
-      content: msg.content,
-      category: msg.category,
-    })));
+    setMessages(
+      state.messages.map((msg) => ({
+        id: msg.id,
+        role: msg.role,
+        name: msg.name,
+        content: msg.content,
+        category: msg.category,
+      })),
+    );
   }, [state]);
 
   const updateAssistantMutation = useMutation({
     mutationFn: async (assistant) => {
       await fetch(`${API_BASE_URL}/${chatId}/assistant`, {
-        method: 'PUT',
-        credentials: 'include',
+        method: "PUT",
+        credentials: "include",
         body: assistant,
       });
     },
@@ -54,54 +59,65 @@ function ChatContent({ chatId }) {
   const sendMessageMutation = useMutation({
     mutationFn: async (message) => {
       await fetch(`${API_BASE_URL}/${chatId}/message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(message),
         signal: abortControllerRef.current.signal,
       });
     },
-  })
+  });
 
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId) => {
       await fetch(`${API_BASE_URL}/${chatId}/message/${messageId}`, {
-        method: 'DELETE',
-        credentials: 'include',
+        method: "DELETE",
+        credentials: "include",
       });
     },
     onSuccess: (_, messageId) => {
-      setMessages(prev => prev.filter(msg => msg.id !== messageId));
-    }
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+    },
   });
 
   const createNewChat = () => {
-    window.location.href = '/chat';
+    window.location.href = "/chat";
   };
 
   useEffect(() => {
     // Set up SSE listener
-    const eventSource = new EventSource(`${API_BASE_URL}/${chatId}/events`, { withCredentials: true });
-    eventSource.onmessage = function(event) {
+    const eventSource = new EventSource(`${API_BASE_URL}/${chatId}/events`, {
+      withCredentials: true,
+    });
+    eventSource.onmessage = function (event) {
       const data = JSON.parse(event.data);
-      console.log(data)
+      console.log(data);
 
-      if (data.type === 'begin_message') {
-        setMessages(prev => [...prev, { id: data.id, role: data.role, name: data.name, content: '', category: data.category }]);
-      } else if (data.type === 'clear') {
+      if (data.type === "begin_message") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: data.id,
+            role: data.role,
+            name: data.name,
+            content: "",
+            category: data.category,
+          },
+        ]);
+      } else if (data.type === "clear") {
         setMessages([]);
-      } else if (data.type === 'add_chunk') {
+      } else if (data.type === "add_chunk") {
         // Append chunk to the last message
-        setMessages(prev => {
+        setMessages((prev) => {
           const updated = [...prev];
           const i = updated.length - 1;
           updated[i] = {
             ...updated[i],
-            content: updated[i].content + data.chunk
+            content: updated[i].content + data.chunk,
           };
           return updated;
         });
-      } else if (data.type === 'end_message') {
+      } else if (data.type === "end_message") {
         // TODO handle end_message in web app
       }
     };
@@ -115,16 +131,16 @@ function ChatContent({ chatId }) {
   useEffect(() => {
     const handleNewChatShortcut = (e) => {
       // Check for Cmd+Shift+O (Mac) or Ctrl+Shift+O (Windows/Linux)
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'o') {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "o") {
         e.preventDefault();
         createNewChat();
       }
     };
 
-    window.addEventListener('keydown', handleNewChatShortcut);
+    window.addEventListener("keydown", handleNewChatShortcut);
 
     return () => {
-      window.removeEventListener('keydown', handleNewChatShortcut);
+      window.removeEventListener("keydown", handleNewChatShortcut);
     };
   }, []);
 
@@ -132,24 +148,24 @@ function ChatContent({ chatId }) {
   useEffect(() => {
     const handleKeyboardShortcuts = (e) => {
       // Check for Shift+Esc to focus input
-      if (e.shiftKey && e.key === 'Escape') {
+      if (e.shiftKey && e.key === "Escape") {
         e.preventDefault();
         if (messageInputRef.current) {
           messageInputRef.current.focus();
         }
       }
-      
+
       // Check for Escape to abort current request
-      if (e.key === 'Escape' && abortControllerRef.current) {
+      if (e.key === "Escape" && abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
     };
 
-    window.addEventListener('keydown', handleKeyboardShortcuts);
+    window.addEventListener("keydown", handleKeyboardShortcuts);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyboardShortcuts);
+      window.removeEventListener("keydown", handleKeyboardShortcuts);
     };
   }, []);
 
@@ -164,8 +180,8 @@ function ChatContent({ chatId }) {
       setScrolledToBottom(isAtBottom);
     };
 
-    chatHistory.addEventListener('scroll', handleScroll);
-    return () => chatHistory.removeEventListener('scroll', handleScroll);
+    chatHistory.addEventListener("scroll", handleScroll);
+    return () => chatHistory.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Scroll to bottom when messages change, but only if already at bottom
@@ -182,12 +198,15 @@ function ChatContent({ chatId }) {
     const messageId = crypto.randomUUID();
 
     // Add message to UI with the generated ID
-    setMessages(prev => [...prev, {
-      id: messageId,
-      role: 'user',
-      name: 'You',
-      content: inputText
-    }]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: messageId,
+        role: "user",
+        name: "You",
+        content: inputText,
+      },
+    ]);
 
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
@@ -198,11 +217,11 @@ function ChatContent({ chatId }) {
       assistant: selectedAssistant,
     });
 
-    setInputText('');
+    setInputText("");
   };
 
   const deleteMessage = (messageId) => {
-    if (!confirm('Are you sure you want to delete this message?')) {
+    if (!confirm("Are you sure you want to delete this message?")) {
       return;
     }
     deleteMessageMutation.mutate(messageId);
@@ -227,10 +246,10 @@ function ChatContent({ chatId }) {
               const assistant = e.target.value;
               setSelectedAssistant(assistant);
               updateAssistantMutation.mutate(assistant);
-              document.getElementById('messageInput').focus();
+              document.getElementById("messageInput").focus();
             }}
           >
-            {assistants.map(assistant => (
+            {assistants.map((assistant) => (
               <option key={assistant.name} value={assistant.name}>
                 {assistant.name}
               </option>
@@ -239,7 +258,10 @@ function ChatContent({ chatId }) {
         </div>
         <div className="navbar-end">
           <div className="tooltip tooltip-left" data-tip="New chat">
-            <button className="btn btn-ghost btn-circle" onClick={createNewChat}>
+            <button
+              className="btn btn-ghost btn-circle"
+              onClick={createNewChat}
+            >
               <i className="fas fa-comment-medical text-lg"></i>
             </button>
           </div>
@@ -247,20 +269,22 @@ function ChatContent({ chatId }) {
       </div>
 
       <div className="flex flex-col max-w-5xl mx-auto h-[calc(100vh-64px)] w-full">
-        <div id="chatHistory" className="p-4 overflow-y-auto flex-grow" ref={chatHistoryRef}>
-          {
-            messages.map((msg) => (
-              <ChatMessage
-                id={msg.id}
-                key={msg.id}
-                role={msg.role}
-                content={msg.content}
-                name={msg.name}
-                category={msg.category}
-                onDelete={deleteMessage}
-              />
-            ))
-          }
+        <div
+          id="chatHistory"
+          className="p-4 overflow-y-auto flex-grow"
+          ref={chatHistoryRef}
+        >
+          {messages.map((msg) => (
+            <ChatMessage
+              id={msg.id}
+              key={msg.id}
+              role={msg.role}
+              content={msg.content}
+              name={msg.name}
+              category={msg.category}
+              onDelete={deleteMessage}
+            />
+          ))}
         </div>
         <div id="chatControls" className="flex flex-col mt-auto p-4 space-y-2">
           <div className="flex flex-col space-y-2">
@@ -275,11 +299,12 @@ function ChatContent({ chatId }) {
                   onChange={(e) => {
                     setInputText(e.target.value);
                     // Auto-resize the textarea
-                    e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 192) + 'px';
+                    e.target.style.height = "auto";
+                    e.target.style.height =
+                      Math.min(e.target.scrollHeight, 192) + "px";
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       sendMessage();
                     }
