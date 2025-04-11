@@ -66,8 +66,8 @@ function ChatContent({ chatId }) {
     window.location.href = "/chat";
   };
 
+  // Set up SSE listener
   useEffect(() => {
-    // Set up SSE listener
     const eventSource = new EventSource(`${API_BASE_URL}/${chatId}/events`, {
       withCredentials: true,
     });
