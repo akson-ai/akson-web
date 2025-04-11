@@ -22,7 +22,6 @@ function ChatContent({ chatId }) {
     }
   });
 
-  // TODO set page title from state
   const { data: state } = useSuspenseQuery({
     queryKey: ['state', chatId],
     queryFn: async () => {
@@ -32,6 +31,7 @@ function ChatContent({ chatId }) {
   });
 
   useEffect(() => {
+    document.title = state.title;
     setSelectedAssistant(state.assistant);
     setMessages(state.messages.map(msg => ({
       id: msg.id,
