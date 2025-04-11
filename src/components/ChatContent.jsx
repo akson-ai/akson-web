@@ -64,6 +64,18 @@ function ChatContent({ chatId }) {
     },
   })
 
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId) => {
+      await fetch(`${API_BASE_URL}/${chatId}/message/${messageId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+    },
+    onSuccess: (_, messageId) => {
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    }
+  });
+
   const createNewChat = () => {
     window.location.href = '/chat';
   };
@@ -191,31 +203,10 @@ function ChatContent({ chatId }) {
   };
 
   const deleteMessage = (messageId) => {
-    // Ask for confirmation before deleting
     if (!confirm('Are you sure you want to delete this message?')) {
       return;
     }
-    
-    // Optimistically update UI
-    const newMessages = messages.filter(msg => msg.id !== messageId);
-    setMessages(newMessages);
-
-    // Send delete request to backend
-    fetch(`${API_BASE_URL}/${chatId}/message/${messageId}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Failed to delete message');
-      }
-      // Message successfully deleted on the server
-    })
-    .catch(error => {
-      console.error('Error deleting message:', error);
-      // Revert the optimistic update if there was an error
-      setMessages(messages);
-    });
+    deleteMessageMutation.mutate(messageId);
   };
 
   return (
