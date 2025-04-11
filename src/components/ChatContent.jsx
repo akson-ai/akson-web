@@ -4,7 +4,6 @@ import ChatMessage from './ChatMessage';
 import { API_BASE_URL } from '../constants';
 
 
-
 function ChatContent({ chatId }) {
   const abortControllerRef = useRef(null);
   const [messages, setMessages] = useState([]);
@@ -110,7 +109,7 @@ function ChatContent({ chatId }) {
     return () => {
       eventSource.close();
     };
-  }, []);
+  }, [chatId]);
 
   // Add a separate useEffect for the keyboard shortcut
   useEffect(() => {
