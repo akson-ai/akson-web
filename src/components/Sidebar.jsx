@@ -1,21 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../constants';
 
 function Sidebar({ chatId }) {
-  const [chatHistory, setChatHistory] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [hoveredChatId, setHoveredChatId] = useState(null);
+  const queryClient = useQueryClient();
 
-  const loadChatHistory = () => {
-    fetch(`${API_BASE_URL}/chats`, { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        setChatHistory(data);
-      })
-      .catch(err => {
-        console.error('Error loading chat history:', err);
+  const { data: chatHistory = [] } = useQuery({
+    queryKey: ['chats'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/chats`, { credentials: 'include' });
+      return res.json();
+    }
+  });
+
+  const deleteChatMutation = useMutation({
+    mutationFn: async (id) => {
+      await fetch(`${API_BASE_URL}/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
       });
-  };
+    },
+    onSuccess: (_, id) => {
+      if (id === chatId) {
+        window.location.href = '/chat';
+      }
+      queryClient.setQueryData(['chats'], prev => prev.filter(chat => chat.id !== id));
+    }
+  });
 
   // Filter chats based on search term
   const filteredChats = searchTerm.trim()
@@ -31,37 +44,13 @@ function Sidebar({ chatId }) {
   const handleDeleteChat = (e, id) => {
     e.preventDefault();
     e.stopPropagation();
-
     if (confirm('Are you sure you want to delete this chat?')) {
-      fetch(`${API_BASE_URL}/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-        .then((res) => {
-          if (res.ok) {
-            // Remove the chat from the list
-            setChatHistory(prev => prev.filter(chat => chat.id !== id));
-
-            // If the deleted chat is the current one, redirect to a new chat
-            if (id === chatId) {
-              window.location.href = '/chat';
-            }
-          } else {
-            console.error('Failed to delete chat');
-          }
-        })
-        .catch(err => {
-          console.error('Error deleting chat:', err);
-        });
+      deleteChatMutation.mutate(id);
     }
   };
 
-  useEffect(() => {
-    loadChatHistory();
-  }, []);
-
   return (
-    <div className="bg-base-200 w-80 h-full flex flex-col">
+    <div className="bg-base-200 w-160 h-full flex flex-col">
       <div className="p-4">
         <input
           id="search-chats"
