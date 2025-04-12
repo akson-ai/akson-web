@@ -32,10 +32,6 @@ function Sidebar({ chatId }) {
       )
     : chatHistory;
 
-  const handleSelectChat = (id) => {
-    window.location.href = `/chat?id=${id}`;
-  };
-
   const handleDeleteChat = (e, id) => {
     e.preventDefault();
     e.stopPropagation();
@@ -45,46 +41,35 @@ function Sidebar({ chatId }) {
   };
 
   return (
-    <div className="bg-base-200 w-160 h-full flex flex-col">
-      <div className="p-4">
-        <input
-          id="search-chats"
-          type="text"
-          placeholder="Search chats..."
-          className="input input-bordered w-full"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-      <div className="overflow-y-auto flex-grow">
-        <ul className="menu w-full">
-          {filteredChats.map((chat) => (
-            <li
-              key={chat.id}
-              onMouseEnter={() => setHoveredChatId(chat.id)}
-              onMouseLeave={() => setHoveredChatId(null)}
-            >
-              <a
-                href={`/chat?id=${chat.id}`}
-                className="flex"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleSelectChat(chat.id);
-                }}
+    <div className="menu bg-base-200 text-base-content min-h-full w-120 p-4">
+      <input
+        id="search-chats"
+        type="text"
+        placeholder="Search chats..."
+        className="input input-bordered w-full"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <ul className="mt-4">
+        {filteredChats.map((chat) => (
+          <li
+            key={chat.id}
+            onMouseEnter={() => setHoveredChatId(chat.id)}
+            onMouseLeave={() => setHoveredChatId(null)}
+          >
+            <a href={`/chat?id=${chat.id}`}>
+              <div className="truncate">{chat.title}</div>
+              <button
+                className={`btn btn-xs btn-ghost btn-square btn-error justify-self-end ${hoveredChatId === chat.id ? "visible" : "invisible"}`}
+                onClick={(e) => handleDeleteChat(e, chat.id)}
+                title="Delete chat"
               >
-                <span className="grow truncate">{chat.title}</span>
-                <button
-                  className={`btn btn-xs btn-ghost btn-square btn-error flex-none ${hoveredChatId === chat.id ? "visible" : "invisible"}`}
-                  onClick={(e) => handleDeleteChat(e, chat.id)}
-                  title="Delete chat"
-                >
-                  <i className="fas fa-trash"></i>
-                </button>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
+                <i className="fas fa-trash"></i>
+              </button>
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
